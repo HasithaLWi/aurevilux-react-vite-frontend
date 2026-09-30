@@ -1,15 +1,58 @@
+import { useState, useRef, useEffect } from "react";
 import { ArrowRight } from "lucide-react";
 
 const Hero = () => {
+  const [isVideoLoaded, setIsVideoLoaded] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    if (videoRef.current) {
+      videoRef.current.defaultMuted = true;
+      videoRef.current.muted = true;
+
+      // Set playback speed (1.0 = normal, 0.75 = 75% speed, 0.5 = half speed)
+      videoRef.current.playbackRate = 0.75;
+
+      const playPromise = videoRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {
+          // Fallback gracefully to static image if autoplay is restricted
+        });
+      }
+    }
+  }, []);
+
   return (
-    <section className="relative w-full h-[calc(100vh)] overflow-hidden bg-brand-black flex items-center pt-20 ">
-      {/* Background Campaign Image with Crimson Glow Mask */}
-      <div className="absolute inset-0 z-0">
+    <section className="relative w-full h-screen overflow-hidden bg-brand-black flex items-center pt-20">
+      {/* Background Media Container with Crimson Glow Mask */}
+      <div className="absolute inset-0 z-0 overflow-hidden">
+        {/* Instant Base Poster Image */}
         <img
           src="/images/home/hero/hero_section_image.webp"
           alt="Aurevilux Campaign"
-          className="w-full h-full object-cover object-center  opacity-100 mt-[80px]"
+          className="w-full h-full object-cover object-center mt-[80px]"
         />
+
+        {/* Seamless Looping Ambient WebM Video */}
+        <video
+          ref={videoRef}
+          autoPlay
+          loop
+          muted
+          playsInline
+          preload="auto"
+          onPlaying={() => setIsVideoLoaded(true)}
+          onCanPlayThrough={() => setIsVideoLoaded(true)}
+          className={`absolute inset-0 w-full h-full mt-[80px] object-cover object-center transition-opacity duration-[700ms] ease-in-out pointer-events-none ${
+            isVideoLoaded ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          <source
+            src="/videos/upscaled-video_formatted.webm"
+            type="video/webm"
+          />
+        </video>
+
         {/* Shadow overlays and glowing radial gradients */}
         <div className="absolute inset-0 bg-gradient-to-r from-brand-black via-brand-black/75 to-transparent md:w-[65%]" />
         <div className="absolute inset-0 bg-gradient-to-t from-brand-black via-transparent to-brand-black/30" />
@@ -33,7 +76,8 @@ const Hero = () => {
           </div>
 
           <p className="max-w-md text-sm md:text-base text-zinc-300 font-light leading-relaxed">
-            Discover contemporary silhouettes crafted for confidence, elegance, and effortless sophistication.
+            Discover contemporary silhouettes crafted for confidence, elegance,
+            and effortless sophistication.
           </p>
 
           <div className="flex flex-wrap items-center gap-6 pt-2">
@@ -66,7 +110,9 @@ const Hero = () => {
                 />
               </div>
               <div className="flex-grow flex flex-col justify-center space-y-1">
-                <span className="text-[9px] tracking-[0.25em] text-brand-gold font-bold">FEATURED</span>
+                <span className="text-[9px] tracking-[0.25em] text-brand-gold font-bold">
+                  FEATURED
+                </span>
                 <h4 className="font-serif text-xs text-white uppercase tracking-wider group-hover:text-brand-gold transition-colors">
                   EVENING EDIT
                 </h4>
