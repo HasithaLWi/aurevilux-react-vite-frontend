@@ -1,29 +1,96 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { ArrowRight } from "lucide-react";
 
 const Hero = () => {
-  const [isVideoLoaded, setIsVideoLoaded] = useState(false);
+  const [isVideoReady, setIsVideoReady] = useState(false);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isTouchDevice, setIsTouchDevice] = useState(false);
+
   const videoRef = useRef<HTMLVideoElement>(null);
+  const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const fadeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Stop video playback and fade back to poster image
+  const stopVideo = useCallback(() => {
+    setIsPlaying(false);
+    // Pause video after the 700ms crossfade transition finishes
+    if (fadeTimeoutRef.current) clearTimeout(fadeTimeoutRef.current);
+    fadeTimeoutRef.current = setTimeout(() => {
+      if (videoRef.current) {
+        videoRef.current.pause();
+      }
+    }, 700);
+  }, []);
+
+  // Start video playback and crossfade into motion
+  const startVideo = useCallback(() => {
+    if (fadeTimeoutRef.current) clearTimeout(fadeTimeoutRef.current);
+    if (videoRef.current) {
+      videoRef.current.playbackRate = 0.75;
+      const playPromise = videoRef.current.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {});
+      }
+    }
+    setIsPlaying(true);
+  }, []);
+
+  // Handle cursor movement inside hero section
+  const handleMouseMove = () => {
+    if (isTouchDevice) return;
+
+    startVideo();
+
+    // Reset 10-second inactivity countdown
+    if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    idleTimerRef.current = setTimeout(() => {
+      stopVideo();
+    }, 10000);
+  };
+
+  // Handle cursor leaving the hero section
+  const handleMouseLeave = () => {
+    if (isTouchDevice) return;
+
+    if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    stopVideo();
+  };
 
   useEffect(() => {
+    // Detect touch / mobile devices lacking hover/fine pointer
+    const isTouch = !window.matchMedia("(hover: hover) and (pointer: fine)")
+      .matches;
+    setIsTouchDevice(isTouch);
+
     if (videoRef.current) {
       videoRef.current.defaultMuted = true;
       videoRef.current.muted = true;
-
-      // Set playback speed (1.0 = normal, 0.75 = 75% speed, 0.5 = half speed)
       videoRef.current.playbackRate = 0.75;
+    }
 
-      const playPromise = videoRef.current.play();
-      if (playPromise !== undefined) {
-        playPromise.catch(() => {
-          // Fallback gracefully to static image if autoplay is restricted
-        });
+    if (isTouch) {
+      // Mobile Option 2: ambient loop continuous playback
+      setIsPlaying(true);
+      if (videoRef.current) {
+        const p = videoRef.current.play();
+        if (p !== undefined) p.catch(() => {});
       }
     }
+
+    return () => {
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+      if (fadeTimeoutRef.current) clearTimeout(fadeTimeoutRef.current);
+    };
   }, []);
 
+  const shouldShowVideo = isVideoReady && isPlaying;
+
   return (
-    <section className="relative w-full h-screen overflow-hidden bg-brand-black flex items-center pt-20">
+    <section
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      className="relative w-full h-screen overflow-hidden bg-brand-black flex items-center pt-20"
+    >
       {/* Background Media Container with Crimson Glow Mask */}
       <div className="absolute inset-0 z-0 overflow-hidden">
         {/* Instant Base Poster Image */}
@@ -33,24 +100,20 @@ const Hero = () => {
           className="w-full h-full object-cover object-center mt-[80px]"
         />
 
-        {/* Seamless Looping Ambient WebM Video */}
+        {/* Seamless Interactive Looping WebM Video */}
         <video
           ref={videoRef}
-          autoPlay
           loop
           muted
           playsInline
           preload="auto"
-          onPlaying={() => setIsVideoLoaded(true)}
-          onCanPlayThrough={() => setIsVideoLoaded(true)}
+          onPlaying={() => setIsVideoReady(true)}
+          onCanPlayThrough={() => setIsVideoReady(true)}
           className={`absolute inset-0 w-full h-full mt-[80px] object-cover object-center transition-opacity duration-[700ms] ease-in-out pointer-events-none ${
-            isVideoLoaded ? "opacity-100" : "opacity-0"
+            shouldShowVideo ? "opacity-100" : "opacity-0"
           }`}
         >
-          <source
-            src="/videos/upscaled-video_formatted.webm"
-            type="video/webm"
-          />
+          <source src="videos/hero_section_video.webm" type="video/webm" />
         </video>
 
         {/* Shadow overlays and glowing radial gradients */}
