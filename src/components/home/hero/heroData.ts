@@ -1,3 +1,12 @@
+export interface HeroLookCard {
+  tag: string;
+  title: string;
+  spec: string;
+  price: string;
+  image: string;
+  link: string;
+}
+
 export interface HeroSlideData {
   id: string;
   number: string;
@@ -13,6 +22,7 @@ export interface HeroSlideData {
   secondaryCtaLink: string;
   backgroundImage: string;
   modelImage: string;
+  lookCard: HeroLookCard;
 }
 
 export const HERO_SLIDES: HeroSlideData[] = [
@@ -32,6 +42,14 @@ export const HERO_SLIDES: HeroSlideData[] = [
     secondaryCtaLink: "#lookbook",
     backgroundImage: "/images/home/hero/hero_section_image-new.webp",
     modelImage: "/images/home/hero/hero_section_image-new-rbg.png",
+    lookCard: {
+      tag: "ATELIER SELECTION",
+      title: "VELVET LUNA WING GOWN",
+      spec: "Pure Silk Velvet • Midnight Plum",
+      price: "$2,850",
+      image: "/images/products/VELVET LUNA DRESS.jpeg",
+      link: "/shop",
+    },
   },
   {
     id: "modern-elegance",
@@ -49,6 +67,14 @@ export const HERO_SLIDES: HeroSlideData[] = [
     secondaryCtaLink: "#lookbook",
     backgroundImage: "/images/newcollection/new-collection-THE-EVENING-EDIT.webp",
     modelImage: "/images/newcollection/new-collection-THE-EVENING-EDIT-background-removed.png",
+    lookCard: {
+      tag: "NOCTURNE PIECE",
+      title: "ASTRAL CAPE JACKET",
+      spec: "Hand-Tailored Silk & Wool Lapels",
+      price: "$1,950",
+      image: "/images/products/ASTRAL MOTO JACKET.jpeg",
+      link: "/shop",
+    },
   },
   {
     id: "haute-couture",
@@ -66,6 +92,14 @@ export const HERO_SLIDES: HeroSlideData[] = [
     secondaryCtaLink: "#lookbook",
     backgroundImage: "/images/newcollection/new-collection-AUTUMN-COLLECTION.webp",
     modelImage: "/images/newcollection/new-collection-AUTUMN-COLLECTION-background-removed.png",
+    lookCard: {
+      tag: "RUNWAY EDIT",
+      title: "ONIX SCULPTED BLAZER",
+      spec: "Italian Structured Cashmere",
+      price: "$2,400",
+      image: "/images/products/ONIX TAILORED BLAZER.jpeg",
+      link: "/shop",
+    },
   },
   {
     id: "bespoke-silhouettes",
@@ -83,5 +117,13 @@ export const HERO_SLIDES: HeroSlideData[] = [
     secondaryCtaLink: "#lookbook",
     backgroundImage: "/images/newcollection/new-collection-MODERN- SILHOUETTES.webp",
     modelImage: "/images/newcollection/new-collection-MODERN-SILHOUETTES-background-removed.png",
+    lookCard: {
+      tag: "COUTURE OBJECT",
+      title: "SERPENTINE SADDLE BAG",
+      spec: "Gold Hardware • Calfskin Leather",
+      price: "$1,650",
+      image: "/images/products/SEPENTINE SADDLE BAG.jpeg",
+      link: "/shop",
+    },
   },
 ];

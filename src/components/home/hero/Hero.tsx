@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
 import { gsap, useGSAP, motionTokens } from "../../../animations";
@@ -10,11 +10,32 @@ const Hero: React.FC = () => {
 
   const heroContainerRef = useRef<HTMLElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
-  const modelRef = useRef<HTMLImageElement>(null);
-  const bgRef = useRef<HTMLImageElement>(null);
   const leftContentRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
   const progressBarRef = useRef<HTMLDivElement>(null);
   const timelineRef = useRef<gsap.core.Timeline | null>(null);
+
+  // Industry-Standard Preloader: Preload & GPU-decode all slide assets immediately on mount
+  useEffect(() => {
+    HERO_SLIDES.forEach((slide) => {
+      // 1. Preload backdrop WebP
+      const bgImg = new Image();
+      bgImg.src = slide.backgroundImage;
+
+      // 2. Preload & GPU-decode transparent cutout model
+      const modelImg = new Image();
+      modelImg.src = slide.modelImage;
+      if ("decode" in modelImg) {
+        modelImg.decode().catch(() => {});
+      }
+
+      // 3. Preload look card thumbnail
+      if (slide.lookCard?.image) {
+        const cardImg = new Image();
+        cardImg.src = slide.lookCard.image;
+      }
+    });
+  }, []);
 
   // Manual navigation to any slide
   const goToSlide = useCallback((newIndex: number) => {
@@ -25,7 +46,7 @@ const Hero: React.FC = () => {
     setSlideIndex(targetIndex);
   }, []);
 
-  // Pause on hovering over action buttons so user can click comfortably
+  // Pause on hovering over action buttons or look card so user can click comfortably
   const handleCtaMouseEnter = () => {
     if (timelineRef.current) {
       timelineRef.current.pause();
@@ -38,7 +59,7 @@ const Hero: React.FC = () => {
     }
   };
 
-  // Master Motion Timeline: Typewriter cadence + Model 2.5D rise + Auto-Carousel Cycle
+  // Master Motion Timeline: Typewriter cadence + Auto-Carousel Cycle
   useGSAP(
     () => {
       // Accessibility: Reduced motion check
@@ -66,33 +87,12 @@ const Hero: React.FC = () => {
         y: 12,
       });
 
-      // 2. Animate Centerpiece Model & Atmospheric Backdrop
-      if (modelRef.current) {
+      // 2. Animate Look Card & Editorial Copy on Slide Change
+      if (cardRef.current) {
         gsap.fromTo(
-          modelRef.current,
-          {
-            opacity: 0.15,
-            y: 40,
-            scale: 0.96,
-            filter: "blur(4px)",
-          },
-          {
-            opacity: 1,
-            y: 0,
-            scale: 1,
-            filter: "blur(0px)",
-            duration: 0.8,
-            ease: "power3.out",
-            clearProps: "filter",
-          },
-        );
-      }
-
-      if (bgRef.current) {
-        gsap.fromTo(
-          bgRef.current,
-          { opacity: 0.2, scale: 1.05 },
-          { opacity: 0.45, scale: 1.0, duration: 0.9, ease: "power2.out" },
+          cardRef.current,
+          { opacity: 0, y: 18, scale: 0.96 },
+          { opacity: 1, y: 0, scale: 1, duration: 0.65, delay: 0.15, ease: "power2.out" }
         );
       }
 
@@ -100,7 +100,7 @@ const Hero: React.FC = () => {
         gsap.fromTo(
           "[data-hero-copy]",
           { opacity: 0, y: 16 },
-          { opacity: 1, y: 0, duration: 0.5, delay: 0.1, ease: "power2.out" },
+          { opacity: 1, y: 0, duration: 0.5, delay: 0.1, ease: "power2.out" }
         );
       }
 
@@ -119,7 +119,7 @@ const Hero: React.FC = () => {
           progressBarRef.current,
           { width: "0%" },
           { width: "100%", duration: 4.8, ease: "none" },
-          0,
+          0
         );
       }
 
@@ -135,9 +135,9 @@ const Hero: React.FC = () => {
             stagger: 0.025,
             ease: "power3.out",
           },
-          0.05,
+          0.05
         )
-        // Step B: Line 2 starts immediately right behind line 1
+        // Step B: Line 2 letters start right behind line 1 with fluid cascade
         .to(
           "[data-line2-letter]",
           {
@@ -148,7 +148,7 @@ const Hero: React.FC = () => {
             stagger: 0.025,
             ease: "power3.out",
           },
-          "<0.1", // 👈 Starts just 0.1s after Line 1 begins (fluid cascade)
+          "<0.1"
         )
         // Step C: Gold period pops in crisply
         .to(
@@ -160,7 +160,7 @@ const Hero: React.FC = () => {
             duration: 0.2,
             ease: "back.out(2)",
           },
-          "-=0.08",
+          "-=0.08"
         )
         // Step D: Editorial Hold — let the client view and absorb the luxury look
         .to({}, { duration: 3.0 })
@@ -184,7 +184,7 @@ const Hero: React.FC = () => {
             },
             ease: "power2.in",
           },
-          "-=0.05",
+          "-=0.05"
         )
         .to(
           "[data-line1-letter]",
@@ -199,14 +199,14 @@ const Hero: React.FC = () => {
             },
             ease: "power2.in",
           },
-          "-=0.08",
+          "-=0.08"
         );
 
       return () => {
         slideTl.kill();
       };
     },
-    { scope: heroContainerRef, dependencies: [slideIndex] },
+    { scope: heroContainerRef, dependencies: [slideIndex] }
   );
 
   return (
@@ -214,24 +214,35 @@ const Hero: React.FC = () => {
       ref={heroContainerRef}
       className="relative w-full min-h-screen md:h-screen bg-brand-black overflow-hidden flex flex-col justify-between pt-24 md:pt-28 pb-8 px-6 md:px-12 select-none"
     >
-      {/* ============================================================ */}
-      {/* 1. LAYER 1: ATMOSPHERIC BACKDROP MEDIA & CRIMSON AMBIENT GLOW */}
-      {/* ============================================================ */}
+      {/* ========================================================================= */}
+      {/* 1. LAYER 1: ATMOSPHERIC BACKDROP MEDIA (DOM LAYER STACKED & GPU DECODED) */}
+      {/* ========================================================================= */}
       <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-        <img
-          ref={bgRef}
-          src={activeSlide.backgroundImage}
-          alt={activeSlide.line1}
-          className="w-full h-full object-cover object-center opacity-45 scale-100 transition-transform duration-1000 ease-out"
-        />
+        {HERO_SLIDES.map((slide, idx) => {
+          const isActive = idx === slideIndex;
+          return (
+            <img
+              key={`bg-${slide.id}`}
+              src={slide.backgroundImage}
+              alt={slide.line1}
+              fetchPriority={idx === 0 ? "high" : "low"}
+              loading={idx === 0 ? "eager" : "lazy"}
+              className={`absolute inset-0 w-full h-full object-cover object-center transition-all duration-1000 ease-out gpu-accelerated ${
+                isActive
+                  ? "opacity-45 scale-100 z-10"
+                  : "opacity-0 scale-105 z-0 pointer-events-none"
+              }`}
+            />
+          );
+        })}
 
         {/* Cinematic Gradient Vignettes */}
-        <div className="absolute inset-0 bg-gradient-to-r from-brand-black via-brand-black/85 to-transparent md:w-[65%]" />
-        <div className="absolute inset-0 bg-gradient-to-t from-brand-black via-transparent to-brand-black/40" />
+        <div className="absolute inset-0 bg-gradient-to-r from-brand-black via-brand-black/85 to-transparent md:w-[65%] z-20 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-t from-brand-black via-transparent to-brand-black/40 z-20 pointer-events-none" />
 
         {/* Soft Glowing Ambient Lights */}
-        <div className="absolute left-[10%] top-[25%] w-[420px] h-[420px] bg-brand-burgundy/30 blur-[130px] rounded-full" />
-        <div className="absolute right-[15%] top-[20%] w-[380px] h-[380px] bg-purple-950/20 blur-[120px] rounded-full" />
+        <div className="absolute left-[10%] top-[25%] w-[420px] h-[420px] bg-brand-burgundy/30 blur-[130px] rounded-full z-20 pointer-events-none" />
+        <div className="absolute right-[15%] top-[20%] w-[380px] h-[380px] bg-purple-950/20 blur-[120px] rounded-full z-20 pointer-events-none" />
       </div>
 
       {/* Far-Left Vertical Rotated Accent Tag */}
@@ -242,22 +253,34 @@ const Hero: React.FC = () => {
         <div className="w-[1px] h-10 bg-zinc-800" />
       </div>
 
-      {/* ============================================================ */}
-      {/* 2. LAYER 2: CENTERPIECE CUTOUT MODEL (SIGNATURE 2.5D DEPTH)   */}
-      {/* ============================================================ */}
-      <div className="absolute inset-0 z-10 flex items-center justify-end pointer-events-none pr-0 sm:pr-4 md:pr-10 lg:pr-16 xl:pr-24">
-        <img
-          ref={modelRef}
-          src={activeSlide.modelImage}
-          alt={`${activeSlide.line1} Model`}
-          className="h-[68vh] sm:h-[75vh] md:h-[82vh] max-h-[820px] w-auto object-contain object-bottom drop-shadow-[0_25px_60px_rgba(0,0,0,0.95)] gpu-accelerated"
-        />
+      {/* ========================================================================= */}
+      {/* 2. LAYER 2: CENTERPIECE CUTOUT MODELS (DOM LAYER STACKED & GPU DECODED)   */}
+      {/* ========================================================================= */}
+      <div className="absolute inset-0 z-10 flex items-center justify-end pointer-events-none pr-0 sm:pr-4 md:pr-10 lg:pr-16 xl:pr-24 overflow-hidden">
+        {HERO_SLIDES.map((slide, idx) => {
+          const isActive = idx === slideIndex;
+          return (
+            <img
+              key={`model-${slide.id}`}
+              src={slide.modelImage}
+              alt={`${slide.line1} Model`}
+              fetchPriority={idx === 0 ? "high" : "low"}
+              loading={idx === 0 ? "eager" : "lazy"}
+              className={`absolute bottom-0 max-h-[820px] h-[68vh] sm:h-[75vh] md:h-[82vh] w-auto object-contain object-bottom drop-shadow-[0_25px_60px_rgba(0,0,0,0.95)] gpu-accelerated transition-all duration-700 ease-out ${
+                isActive
+                  ? "opacity-100 translate-y-0 scale-100 z-10"
+                  : "opacity-0 translate-y-8 scale-95 z-0 pointer-events-none"
+              }`}
+            />
+          );
+        })}
       </div>
 
       {/* ============================================================ */}
-      {/* 3. LAYER 3: MAIN STAGE CONTENT (LEFT EDITORIAL HEADLINE/CTA) */}
+      {/* 3. LAYER 3: MAIN STAGE CONTENT (LEFT EDITORIAL + RIGHT LOOK) */}
       {/* ============================================================ */}
       <div className="relative z-20 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-center flex-1 my-auto">
+        {/* Left Column: Collection Information */}
         <div
           ref={leftContentRef}
           className="lg:col-span-8 xl:col-span-7 space-y-4 md:space-y-5"
@@ -338,6 +361,55 @@ const Hero: React.FC = () => {
               {activeSlide.secondaryCtaText}
             </a>
           </div>
+        </div>
+
+        {/* Right Column: Floating Glassmorphic "Shop The Look" Card (Option 1) */}
+        <div
+          ref={cardRef}
+          onMouseEnter={handleCtaMouseEnter}
+          onMouseLeave={handleCtaMouseLeave}
+          className="lg:col-span-4 xl:col-span-5 lg:justify-self-end w-full max-w-[310px] hidden lg:block self-start lg:mt-2 xl:mt-4"
+        >
+          <Link
+            to={activeSlide.lookCard.link}
+            className="group block bg-brand-dark/55 hover:bg-brand-dark/85 backdrop-blur-md border border-white/10 hover:border-brand-gold/45 rounded-lg p-3.5 shadow-[0_15px_35px_rgba(0,0,0,0.6)] transition-all duration-500 hover:-translate-y-1"
+          >
+            <div className="flex items-center space-x-3.5">
+              {/* Product Thumbnail */}
+              <div className="w-16 h-20 rounded overflow-hidden bg-zinc-950 flex-shrink-0 border border-zinc-800/80">
+                <img
+                  src={activeSlide.lookCard.image}
+                  alt={activeSlide.lookCard.title}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+              </div>
+
+              {/* Details */}
+              <div className="flex-1 space-y-1 text-left min-w-0">
+                <div className="flex items-center justify-between">
+                  <span className="text-[9px] tracking-[0.25em] text-brand-gold font-bold uppercase">
+                    {activeSlide.lookCard.tag}
+                  </span>
+                  <span className="text-[10px] text-zinc-300 font-mono font-medium">
+                    {activeSlide.lookCard.price}
+                  </span>
+                </div>
+
+                <h4 className="font-serif text-xs text-white uppercase tracking-wider truncate group-hover:text-brand-gold transition-colors font-medium">
+                  {activeSlide.lookCard.title}
+                </h4>
+
+                <p className="text-[9px] text-zinc-400 font-light truncate">
+                  {activeSlide.lookCard.spec}
+                </p>
+
+                <div className="flex items-center space-x-1.5 text-[9px] tracking-wider text-brand-gold pt-1 group-hover:translate-x-1 transition-transform">
+                  <span className="font-semibold">DISCOVER PIECE</span>
+                  <ArrowRight className="w-3 h-3" />
+                </div>
+              </div>
+            </div>
+          </Link>
         </div>
       </div>
 
