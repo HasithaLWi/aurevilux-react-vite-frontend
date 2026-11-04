@@ -1,4 +1,4 @@
-import { apiClient } from "./api";
+import { api } from "./api";
 
 export interface LoginPayload {
   username: string;
@@ -34,36 +34,29 @@ export interface UserDetailsResponse {
 }
 
 export const AuthService = {
-  // Login with username & password to Node.js/Express backend
+  // Login with username & password to Node.js/Express backend via Axios
   login: async (payload: LoginPayload): Promise<AuthResponse["data"]> => {
-    const response = await apiClient<AuthResponse>("/auth/login", {
-      method: "POST",
-      data: payload,
-    });
+    const { data } = await api.post<AuthResponse>("/auth/login", payload);
 
-    if (response.data && response.data.access_token) {
-      localStorage.setItem("aurevilux_token", response.data.access_token);
-      localStorage.setItem("aurevilux_refresh_token", response.data.refresh_token);
-      localStorage.setItem("aurevilux_user", JSON.stringify(response.data));
+    if (data?.data?.access_token) {
+      localStorage.setItem("aurevilux_token", data.data.access_token);
+      localStorage.setItem("aurevilux_refresh_token", data.data.refresh_token);
+      localStorage.setItem("aurevilux_user", JSON.stringify(data.data));
     }
 
-    return response.data;
+    return data.data;
   },
 
-  // Register a new customer
+  // Register a new customer via Axios
   register: async (payload: RegisterPayload) => {
-    return apiClient<{ message: string }>("/auth/register", {
-      method: "POST",
-      data: payload,
-    });
+    const { data } = await api.post<{ message: string }>("/auth/register", payload);
+    return data;
   },
 
-  // Fetch authenticated user details
+  // Fetch authenticated user details via Axios
   getProfile: async (): Promise<UserDetailsResponse["data"]> => {
-    const response = await apiClient<UserDetailsResponse>("/auth/me", {
-      method: "GET",
-    });
-    return response.data;
+    const { data } = await api.get<UserDetailsResponse>("/auth/me");
+    return data.data;
   },
 
   // Logout and clear tokens

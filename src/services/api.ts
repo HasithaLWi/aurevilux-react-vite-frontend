@@ -1,7 +1,61 @@
+import axios, {
+  type AxiosError,
+  type AxiosInstance,
+  type AxiosRequestConfig,
+  type InternalAxiosRequestConfig,
+} from "axios";
+
 export const API_BASE_URL =
   import.meta.env.VITE_API_URL || "http://localhost:5000/api/v1";
 
-interface RequestOptions extends RequestInit {
+/**
+ * Global Axios Instance for Aurevilux
+ */
+export const api: AxiosInstance = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    "Content-Type": "application/json",
+  },
+  timeout: 15000,
+});
+
+/**
+ * Request Interceptor:
+ * Automatically attaches the JWT Bearer token from localStorage to every outgoing request.
+ */
+api.interceptors.request.use(
+  (config: InternalAxiosRequestConfig) => {
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("aurevilux_token");
+      if (token && config.headers) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+
+/**
+ * Response Interceptor:
+ * Extracts standardized backend error messages from responses.
+ */
+api.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError<{ message?: string }>) => {
+    const serverMessage =
+      error.response?.data?.message ||
+      error.message ||
+      "An unexpected network error occurred.";
+    return Promise.reject(new Error(serverMessage));
+  }
+);
+
+/**
+ * Backward-compatible generic wrapper helper:
+ * Allows calling apiClient<T>(endpoint, options) and returns the response body directly.
+ */
+export interface RequestOptions extends AxiosRequestConfig {
   data?: unknown;
 }
 
@@ -9,39 +63,12 @@ export async function apiClient<T>(
   endpoint: string,
   options: RequestOptions = {}
 ): Promise<T> {
-  const token =
-    typeof window !== "undefined"
-      ? localStorage.getItem("aurevilux_token")
-      : null;
-
-  const headers = new Headers(options.headers || {});
-
-  if (!headers.has("Content-Type") && !(options.body instanceof FormData)) {
-    headers.set("Content-Type", "application/json");
-  }
-
-  if (token) {
-    headers.set("Authorization", `Bearer ${token}`);
-  }
-
-  const config: RequestInit = {
+  const response = await api.request<T>({
+    url: endpoint,
     ...options,
-    headers,
-  };
+  });
 
-  if (options.data) {
-    config.body = JSON.stringify(options.data);
-  }
-
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
-
-  const resJson = await response.json().catch(() => ({}));
-
-  if (!response.ok) {
-    throw new Error(
-      resJson.message || `API Error: ${response.status} ${response.statusText}`
-    );
-  }
-
-  return resJson as T;
+  return response.data;
 }
+
+export default api;
