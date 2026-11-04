@@ -177,6 +177,18 @@ body {
   animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+@keyframes heroProgress {
+  0% {
+    width: 0%;
+  }
+  100% {
+    width: 100%;
+  }
+}
+.animate-hero-progress {
+  animation: heroProgress linear forwards;
+}
+
 /* GPU hardware acceleration helper */
 .gpu-accelerated {
   transform: translate3d(0, 0, 0);
