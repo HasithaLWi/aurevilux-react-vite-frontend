@@ -1,11 +1,29 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { ArrowRight } from "lucide-react";
+import { gsap, useGSAP, motionTokens } from "../../../animations";
+
+interface HeroSlide {
+  line1: string;
+  line2: string;
+}
+
+const HERO_SLIDES: HeroSlide[] = [
+  { line1: "Timeless", line2: "Allure" },
+  { line1: "Modern", line2: "Elegance" },
+  { line1: "Haute", line2: "Couture" },
+  { line1: "Bespoke", line2: "Silhouettes" },
+];
 
 const Hero = () => {
   const [isVideoReady, setIsVideoReady] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isTouchDevice, setIsTouchDevice] = useState(false);
 
+  const [slideIndex, setSlideIndex] = useState(0);
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const currentSlide = HERO_SLIDES[slideIndex];
+
+  const heroContainerRef = useRef<HTMLElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const idleTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const fadeTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -83,10 +101,227 @@ const Hero = () => {
     };
   }, []);
 
+  // GSAP Cinematic Entrance Sequence
+  useGSAP(
+    () => {
+      if (window.matchMedia(motionTokens.mediaQueries.reducedMotion).matches) {
+        return;
+      }
+
+      const introTl = gsap.timeline({
+        defaults: {
+          ease: motionTokens.ease.editorial,
+        },
+      });
+
+      introTl
+        .fromTo(
+          "[data-hero-poster]",
+          { scale: 1.05, opacity: 0.8 },
+          {
+            scale: 1,
+            opacity: 1,
+            duration: motionTokens.duration.cinematic,
+            ease: motionTokens.ease.smooth,
+            clearProps: "opacity,transform,scale",
+          }
+        )
+        .fromTo(
+          "[data-hero-eyebrow]",
+          { opacity: 0, y: motionTokens.distance.subtle },
+          {
+            opacity: 1,
+            y: 0,
+            duration: motionTokens.duration.standard,
+            clearProps: "opacity,transform",
+          },
+          "-=0.8"
+        )
+        .fromTo(
+          "[data-hero-title]",
+          { opacity: 0, y: motionTokens.distance.editorial },
+          {
+            opacity: 1,
+            y: 0,
+            duration: motionTokens.duration.reveal,
+            clearProps: "opacity,transform",
+          },
+          "-=0.4"
+        )
+        .fromTo(
+          "[data-hero-copy]",
+          { opacity: 0, y: motionTokens.distance.reveal },
+          {
+            opacity: 1,
+            y: 0,
+            duration: motionTokens.duration.standard,
+            clearProps: "opacity,transform",
+          },
+          "-=0.3"
+        )
+        .fromTo(
+          "[data-hero-actions]",
+          { opacity: 0, y: motionTokens.distance.subtle },
+          {
+            opacity: 1,
+            y: 0,
+            duration: motionTokens.duration.standard,
+            clearProps: "opacity,transform",
+          },
+          "-=0.25"
+        )
+        .fromTo(
+          "[data-hero-card]",
+          { opacity: 0, x: 24 },
+          {
+            opacity: 1,
+            x: 0,
+            duration: motionTokens.duration.reveal,
+            ease: motionTokens.ease.smooth,
+            clearProps: "opacity,transform",
+          },
+          "-=0.4"
+        )
+        .fromTo(
+          "[data-hero-scroll]",
+          { opacity: 0, y: -10 },
+          {
+            opacity: 1,
+            y: 0,
+            duration: motionTokens.duration.standard,
+            clearProps: "opacity,transform",
+          },
+          "-=0.2"
+        );
+    },
+    { scope: heroContainerRef }
+  );
+
+  // Combined Motion: Vertical Editorial Glide + Letter-by-Letter Typewriter (Typing in & Erasing)
+  useGSAP(
+    () => {
+      if (window.matchMedia(motionTokens.mediaQueries.reducedMotion).matches) {
+        gsap.set(
+          "[data-line1-letter], [data-line2-letter], [data-hero-dot]",
+          { opacity: 1, y: 0, filter: "none" }
+        );
+        const timer = setTimeout(() => {
+          setSlideIndex((prev) => (prev + 1) % HERO_SLIDES.length);
+        }, 4000);
+        return () => clearTimeout(timer);
+      }
+
+      // 1. Initial State: Characters hidden below with editorial blur focus
+      gsap.set("[data-line1-letter]", {
+        opacity: 0,
+        y: 34,
+        filter: "blur(6px)",
+      });
+      gsap.set("[data-line2-letter]", {
+        opacity: 0,
+        y: 34,
+        filter: "blur(6px)",
+      });
+      gsap.set("[data-hero-dot]", {
+        opacity: 0,
+        scale: 0.4,
+        y: 12,
+      });
+
+      // 2. Complete Choreographed Cycle
+      const slideTl = gsap.timeline({
+        onComplete: () => {
+          setSlideIndex((prev) => (prev + 1) % HERO_SLIDES.length);
+        },
+      });
+
+      slideTl
+        // Step A: Line 1 letters glide up with typewriter cadence
+        .to("[data-line1-letter]", {
+          opacity: 1,
+          y: 0,
+          filter: "blur(0px)",
+          duration: 0.4,
+          stagger: 0.045,
+          ease: "power3.out",
+        })
+        // Step B: Line 2 letters glide up with typewriter cadence (smoothly overlapped)
+        .to(
+          "[data-line2-letter]",
+          {
+            opacity: 1,
+            y: 0,
+            filter: "blur(0px)",
+            duration: 0.4,
+            stagger: 0.045,
+            ease: "power3.out",
+          },
+          "-=0.12"
+        )
+        // Step C: Gold period pops in crisply
+        .to(
+          "[data-hero-dot]",
+          {
+            opacity: 1,
+            scale: 1,
+            y: 0,
+            duration: 0.2,
+            ease: "back.out(2)",
+          },
+          "-=0.08"
+        )
+        // Step D: Editorial Hold — let the customer read & absorb the luxury atmosphere
+        .to({}, { duration: 2.8 })
+        // Step E: Letter-by-letter reverse erase (Backspacing + upward vertical glide)
+        .to("[data-hero-dot]", {
+          opacity: 0,
+          y: -14,
+          duration: 0.15,
+          ease: "power2.in",
+        })
+        .to(
+          "[data-line2-letter]",
+          {
+            opacity: 0,
+            y: -26,
+            filter: "blur(4px)",
+            duration: 0.25,
+            stagger: {
+              each: 0.025,
+              from: "end", // Reverse backspace order: last character erased first
+            },
+            ease: "power2.in",
+          },
+          "-=0.05"
+        )
+        .to(
+          "[data-line1-letter]",
+          {
+            opacity: 0,
+            y: -26,
+            filter: "blur(4px)",
+            duration: 0.25,
+            stagger: {
+              each: 0.025,
+              from: "end", // Reverse backspace order: last character erased first
+            },
+            ease: "power2.in",
+          },
+          "-=0.08"
+        );
+
+      return () => {
+        slideTl.kill();
+      };
+    },
+    { scope: titleRef, dependencies: [slideIndex] }
+  );
+
   const shouldShowVideo = isVideoReady && isPlaying;
 
   return (
     <section
+      ref={heroContainerRef}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
       className="relative w-full h-screen overflow-hidden bg-brand-black flex items-center pt-20"
@@ -95,9 +330,10 @@ const Hero = () => {
       <div className="absolute inset-0 z-0 overflow-hidden">
         {/* Instant Base Poster Image */}
         <img
+          data-hero-poster
           src="/images/home/hero/hero_section_image.webp"
           alt="Aurevilux Campaign"
-          className="w-full h-full object-cover object-center mt-[80px]"
+          className="w-full h-full object-cover object-center mt-[80px] gpu-accelerated"
         />
 
         {/* Seamless Interactive Looping WebM Video */}
@@ -127,23 +363,63 @@ const Hero = () => {
 
       <div className="relative z-10 max-w-7xl mx-auto w-full px-6 md:px-12 py-16 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
         {/* Left Side Content */}
-        <div className="lg:col-span-8 space-y-6 md:space-y-8 animate-fade-in">
-          <div className="space-y-3">
-            <span className="text-[10px] md:text-xs tracking-[0.3em] text-brand-gold font-semibold uppercase">
+        <div className="lg:col-span-8 space-y-4 md:space-y-5">
+          <div className="space-y-2 md:space-y-2.5">
+            <span
+              data-hero-eyebrow
+              className="inline-block text-[10px] md:text-xs tracking-[0.3em] text-brand-gold font-semibold uppercase"
+            >
               NEW AUTUMN / WINTER COLLECTION
             </span>
-            <h1 className="font-serif text-6xl md:text-7xl lg:text-8xl text-white tracking-wide leading-tight text-luxury-shadow">
-              Timeless <br />
-              Allure<span className="text-brand-gold">.</span>
+            <h1
+              ref={titleRef}
+              data-hero-title
+              className="font-serif text-6xl md:text-7xl lg:text-8xl text-white tracking-wide leading-[0.95] md:leading-[0.92] text-luxury-shadow select-none"
+              aria-label={`${currentSlide.line1} ${currentSlide.line2}`}
+            >
+              {/* Slide Line 1: Timeless / Modern / Haute / Bespoke */}
+              <span className="block overflow-visible">
+                {currentSlide.line1.split("").map((letter, idx) => (
+                  <span
+                    key={`l1-${slideIndex}-${idx}`}
+                    data-line1-letter
+                    className="inline-block gpu-accelerated"
+                  >
+                    {letter}
+                  </span>
+                ))}
+              </span>
+
+              {/* Slide Line 2: Allure / Elegance / Couture / Silhouettes */}
+              <span className="inline-flex items-baseline overflow-visible mt-1 md:mt-2">
+                {currentSlide.line2.split("").map((letter, idx) => (
+                  <span
+                    key={`l2-${slideIndex}-${idx}`}
+                    data-line2-letter
+                    className="inline-block gpu-accelerated"
+                  >
+                    {letter}
+                  </span>
+                ))}
+                <span
+                  data-hero-dot
+                  className="text-brand-gold select-none inline-block gpu-accelerated ml-0.5"
+                >
+                  .
+                </span>
+              </span>
             </h1>
           </div>
 
-          <p className="max-w-md text-sm md:text-base text-zinc-300 font-light leading-relaxed">
+          <p
+            data-hero-copy
+            className="max-w-md text-sm md:text-base text-zinc-300 font-light leading-relaxed"
+          >
             Discover contemporary silhouettes crafted for confidence, elegance,
             and effortless sophistication.
           </p>
 
-          <div className="flex flex-wrap items-center gap-6 pt-2">
+          <div data-hero-actions className="flex flex-wrap items-center gap-6">
             <a
               href="#collections"
               className="btn-luxury inline-flex items-center space-x-2 bg-brand-burgundy hover:bg-brand-burgundyHover text-white px-7 py-3.5 rounded text-xs font-semibold tracking-[0.2em] transition-all shadow-lg shadow-brand-burgundy/30"
@@ -162,7 +438,10 @@ const Hero = () => {
         </div>
 
         {/* Right Side Evening Edit Float Card */}
-        <div className="lg:col-span-4 lg:justify-self-end w-full max-w-[280px] hidden md:block animate-slide-up self-end mt-12 lg:mt-0">
+        <div
+          data-hero-card
+          className="lg:col-span-4 lg:justify-self-end w-full max-w-[280px] hidden md:block self-end mt-12 lg:mt-0"
+        >
           <div className="group cursor-pointer">
             <div className="glass-card p-3 rounded flex items-center space-x-4 transition-all duration-300 hover:translate-y-[-2px]">
               <div className="w-16 h-20 overflow-hidden rounded bg-zinc-950 flex-shrink-0">
@@ -190,7 +469,10 @@ const Hero = () => {
       </div>
 
       {/* Scroll indicator bottom left */}
-      <div className="absolute bottom-10 left-6 md:left-12 flex flex-col items-center space-y-3 z-10 hidden sm:flex">
+      <div
+        data-hero-scroll
+        className="absolute bottom-10 left-6 md:left-12 flex flex-col items-center space-y-3 z-10 hidden sm:flex"
+      >
         <div className="h-10 w-[1px] bg-gradient-to-b from-brand-burgundy to-zinc-800 relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1/2 bg-brand-gold animate-bounce" />
         </div>
@@ -203,3 +485,4 @@ const Hero = () => {
 };
 
 export default Hero;
+
