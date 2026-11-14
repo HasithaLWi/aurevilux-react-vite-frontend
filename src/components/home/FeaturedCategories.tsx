@@ -1,10 +1,17 @@
 import React, { useRef } from "react";
-import { Link } from "react-router-dom";
 import { categories } from "../../data/data";
 import { gsap, useGSAP, motionTokens } from "../../animations";
+import { useNavigate } from "react-router-dom";
 
 const FeaturedCategories: React.FC = () => {
   const sectionRef = useRef<HTMLElement>(null);
+  const navigate = useNavigate();
+
+  const handleNavigate = (department: string) => {
+    if (department) {
+      navigate(`/shop?search=${encodeURIComponent(department.trim())}`);
+    }
+  };
 
   useGSAP(
     () => {
@@ -26,7 +33,7 @@ const FeaturedCategories: React.FC = () => {
       tl.fromTo(
         "[data-reveal-title]",
         { opacity: 0, y: motionTokens.distance.subtle },
-        { opacity: 1, y: 0, duration: motionTokens.duration.standard }
+        { opacity: 1, y: 0, duration: motionTokens.duration.standard },
       ).fromTo(
         "[data-category-card]",
         { opacity: 0, y: motionTokens.distance.reveal },
@@ -37,14 +44,17 @@ const FeaturedCategories: React.FC = () => {
           stagger: motionTokens.stagger.standard,
           clearProps: "opacity,transform",
         },
-        "-=0.2"
+        "-=0.2",
       );
     },
-    { scope: sectionRef }
+    { scope: sectionRef },
   );
 
   return (
-    <section ref={sectionRef} className="bg-brand-black w-full py-20 md:py-28 border-t border-zinc-900 overflow-hidden">
+    <section
+      ref={sectionRef}
+      className="bg-brand-black w-full py-20 md:py-28 border-t border-zinc-900 overflow-hidden"
+    >
       <div className="max-w-7xl mx-auto px-6 md:px-12">
         {/* Section Title */}
         <div data-reveal-title className="text-center mb-16 md:mb-20">
@@ -66,7 +76,13 @@ const FeaturedCategories: React.FC = () => {
                 key={category.id}
                 data-category-card
                 className={`group relative w-full aspect-[4/3] lg:aspect-[1.4/1] overflow-hidden rounded bg-brand-dark border border-zinc-800/30 ${
-                  isOffsetDown ? "lg:mt-16" : isOffsetUp ? "lg:-mt-8" : isOffsetLower ? "lg:mt-8" : ""
+                  isOffsetDown
+                    ? "lg:mt-16"
+                    : isOffsetUp
+                      ? "lg:-mt-8"
+                      : isOffsetLower
+                        ? "lg:mt-8"
+                        : ""
                 }`}
               >
                 <img
@@ -84,12 +100,12 @@ const FeaturedCategories: React.FC = () => {
                     {category.description}
                   </p>
                   <div className="pt-2">
-                    <Link
-                      to={category.link}
+                    <button
+                      onClick={() => handleNavigate(category.title)}
                       className="inline-block bg-brand-gold hover:bg-brand-goldLight text-black text-[10px] font-bold tracking-[0.2em] px-5 py-2.5 rounded transition-all duration-300 uppercase shadow-md"
                     >
                       {category.buttonText}
-                    </Link>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -102,4 +118,3 @@ const FeaturedCategories: React.FC = () => {
 };
 
 export default FeaturedCategories;
-

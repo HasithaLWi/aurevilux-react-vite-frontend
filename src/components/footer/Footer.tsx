@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { ArrowRight, Mail, Shield } from "lucide-react";
+import { ArrowRight, Mail, Shield, Loader2 } from "lucide-react";
+import { NewsletterService } from "../../services/newsletter.service";
 
 const InstagramIcon = () => (
   <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
@@ -25,13 +26,33 @@ const featuredBrands = [
 const Footer = () => {
   const [email, setEmail] = useState("");
   const [subscribed, setSubscribed] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
-  const handleSubscribe = (e: React.FormEvent) => {
+  const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email.trim()) {
+    if (!email.trim() || isLoading) return;
+
+    setIsLoading(true);
+    setErrorMessage("");
+
+    try {
+      const res = await NewsletterService.subscribe(email.trim());
+      setStatusMessage(res.message || "THANK YOU FOR SUBSCRIBING.");
       setSubscribed(true);
       setEmail("");
-      setTimeout(() => setSubscribed(false), 5000);
+      setTimeout(() => {
+        setSubscribed(false);
+        setStatusMessage("");
+      }, 7000);
+    } catch (err: any) {
+      setErrorMessage(
+        err.response?.data?.message || "Subscription failed. Please check your email."
+      );
+      setTimeout(() => setErrorMessage(""), 4000);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -121,8 +142,8 @@ const Footer = () => {
             Become a private member. Receive early access to private trunk shows, lookbooks, and invitation-only seasonal releases.
           </p>
           {subscribed ? (
-            <div className="text-[10px] text-brand-gold tracking-widest font-semibold bg-brand-dark/90 border border-brand-gold/40 px-3 py-2.5 rounded animate-scale-in">
-              THANK YOU FOR SUBSCRIBING.
+            <div className="text-[10px] text-brand-gold tracking-widest font-semibold bg-brand-dark/90 border border-brand-gold/40 px-3 py-2.5 rounded animate-scale-in leading-relaxed">
+              {statusMessage || "THANK YOU FOR SUBSCRIBING."}
             </div>
           ) : (
             <form onSubmit={handleSubscribe} className="relative flex border-b border-zinc-800 pb-1.5 focus-within:border-brand-gold transition-colors">
@@ -131,17 +152,28 @@ const Footer = () => {
                 placeholder="ENTER YOUR EMAIL"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                disabled={isLoading}
                 required
-                className="bg-transparent text-xs w-full outline-none text-white tracking-widest font-light placeholder-zinc-600"
+                className="bg-transparent text-xs w-full outline-none text-white tracking-widest font-light placeholder-zinc-600 disabled:opacity-50"
               />
               <button
                 type="submit"
+                disabled={isLoading}
                 aria-label="Subscribe"
-                className="text-zinc-500 hover:text-brand-gold transition-colors pl-2"
+                className="text-zinc-500 hover:text-brand-gold transition-colors pl-2 disabled:opacity-50"
               >
-                <ArrowRight className="w-4 h-4" />
+                {isLoading ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-brand-gold" />
+                ) : (
+                  <ArrowRight className="w-4 h-4" />
+                )}
               </button>
             </form>
+          )}
+          {errorMessage && (
+            <p className="text-[10px] text-red-400 mt-2 tracking-wider font-light">
+              {errorMessage}
+            </p>
           )}
         </div>
       </div>

@@ -173,6 +173,22 @@ export const AdminService = {
     return data.data;
   },
 
+  toggleNewsletterSubscriber: async (id: string): Promise<NewsletterSubscriber> => {
+    const { data } = await api.patch<{ message: string; data: NewsletterSubscriber }>(
+      `/newsletter/admin/subscribers/${id}/status`
+    );
+    return data.data;
+  },
+
+  deleteNewsletterSubscriber: async (id: string): Promise<void> => {
+    await api.delete(`/newsletter/admin/subscribers/${id}`);
+  },
+
+  unsubscribeNewsletter: async (email: string): Promise<{ message: string }> => {
+    const { data } = await api.post<{ message: string }>("/newsletter/unsubscribe", { email });
+    return data;
+  },
+
   broadcastNewsletter: async (subject: string, content: string) => {
     const { data } = await api.post<{ message: string; recipientsCount: number }>(
       "/newsletter/admin/broadcast",

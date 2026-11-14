@@ -15,7 +15,10 @@ import {
   Check,
 } from "lucide-react";
 import type { Product, Category, Brand } from "../../types";
-import { ProductService, type PaginationInfo } from "../../services/product.service";
+import {
+  ProductService,
+  type PaginationInfo,
+} from "../../services/product.service";
 import { CategoryService } from "../../services/category.service";
 import { BrandService } from "../../services/brand.service";
 import { useApp } from "../../context/AppContext";
@@ -26,18 +29,27 @@ const Shop: React.FC = () => {
   const catalogTopRef = useRef<HTMLDivElement>(null);
 
   // Search input state (prominent top search bar)
-  const [searchTerm, setSearchTerm] = useState<string>(searchParams.get("search") || "");
+  const [searchTerm, setSearchTerm] = useState<string>(
+    searchParams.get("search") || "",
+  );
 
   // Filters State
-  const [selectedCategory, setSelectedCategory] = useState<string>(searchParams.get("category") || "");
-  const [selectedSubcategory, setSelectedSubcategory] = useState<string>(searchParams.get("subcategory") || "");
-  const [selectedBrand, setSelectedBrand] = useState<string>(searchParams.get("brand") || "");
+  const [selectedDepartment, setSelectedDepartment] = useState<string>(
+    searchParams.get("department") || "",
+  );
+  const [selectedCategory, setSelectedCategory] = useState<string>(
+    searchParams.get("category") || "",
+  );
+  const [selectedBrand, setSelectedBrand] = useState<string>(
+    searchParams.get("brand") || "",
+  );
   const [priceRange, setPriceRange] = useState<string>("all");
   const [selectedSize, setSelectedSize] = useState<string>("");
   const [sortBy, setSortBy] = useState<string>("featured");
 
   // Inline Filter Sidebar Visibility (DEFAULT HIDDEN as requested)
-  const [isFilterSidebarOpen, setIsFilterSidebarOpen] = useState<boolean>(false);
+  const [isFilterSidebarOpen, setIsFilterSidebarOpen] =
+    useState<boolean>(false);
 
   // Pagination State
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -102,9 +114,16 @@ const Shop: React.FC = () => {
       const result = await ProductService.getPaginatedProducts({
         page: pageToFetch,
         limit: itemsPerPage,
-        category: selectedCategory && selectedCategory !== "all" ? selectedCategory : undefined,
-        subcategory: selectedSubcategory && selectedSubcategory !== "all" ? selectedSubcategory : undefined,
-        brand: selectedBrand && selectedBrand !== "all" ? selectedBrand : undefined,
+        category:
+          selectedDepartment && selectedDepartment !== "all"
+            ? selectedDepartment
+            : undefined,
+        subcategory:
+          selectedCategory && selectedCategory !== "all"
+            ? selectedCategory
+            : undefined,
+        brand:
+          selectedBrand && selectedBrand !== "all" ? selectedBrand : undefined,
         search: searchTerm.trim() ? searchTerm.trim() : undefined,
         sort: sortBy as any,
       });
@@ -116,7 +135,7 @@ const Shop: React.FC = () => {
       console.error("Aurevilux Boutique API Error:", err);
       setBackendOffline(true);
       setErrorMessage(
-        "Unable to connect to Aurevilux server on http://localhost:5000. Please ensure the backend server is running."
+        "Unable to connect to Aurevilux server on http://localhost:5000. Please ensure the backend server is running.",
       );
       setProductsList([]);
     } finally {
@@ -127,7 +146,13 @@ const Shop: React.FC = () => {
   // Trigger fetch whenever filter selections or page changes
   useEffect(() => {
     fetchProducts(currentPage);
-  }, [selectedCategory, selectedSubcategory, selectedBrand, sortBy, currentPage]);
+  }, [
+    selectedDepartment,
+    selectedCategory,
+    selectedBrand,
+    sortBy,
+    currentPage,
+  ]);
 
   // Real-time debounced search (searches name, department, category live as user types)
   useEffect(() => {
@@ -175,27 +200,31 @@ const Shop: React.FC = () => {
 
   // Synchronize state when URL params change externally
   useEffect(() => {
-    const category = searchParams.get("category");
-    const subcat = searchParams.get("subcategory");
+    const department = searchParams.get("department");
+    const category = searchParams.get("subcategory");
     const brand = searchParams.get("brand");
     const search = searchParams.get("search");
 
+    if (department !== null) setSelectedDepartment(department);
     if (category !== null) setSelectedCategory(category);
-    if (subcat !== null) setSelectedSubcategory(subcat);
     if (brand !== null) setSelectedBrand(brand);
     if (search !== null) setSearchTerm(search);
   }, [searchParams]);
 
   // Extract all unique sizes from loaded products for side filter
   const allSizes = Array.from(
-    new Set(productsList.flatMap((p) => p.sizes || []))
+    new Set(productsList.flatMap((p) => p.sizes || [])),
   );
 
   // Client-side fine-tuning for price & size (if active)
   const displayedProducts = productsList.filter((product) => {
     if (priceRange !== "all") {
       if (priceRange === "under-500" && product.price >= 500) return false;
-      if (priceRange === "500-1000" && (product.price < 500 || product.price > 1000)) return false;
+      if (
+        priceRange === "500-1000" &&
+        (product.price < 500 || product.price > 1000)
+      )
+        return false;
       if (priceRange === "over-1000" && product.price <= 1000) return false;
     }
     if (selectedSize && !product.sizes?.includes(selectedSize)) return false;
@@ -203,8 +232,8 @@ const Shop: React.FC = () => {
   });
 
   const clearAllFilters = () => {
+    setSelectedDepartment("");
     setSelectedCategory("");
-    setSelectedSubcategory("");
     setSelectedBrand("");
     setPriceRange("all");
     setSelectedSize("");
@@ -251,8 +280,8 @@ const Shop: React.FC = () => {
               A U R E V I L U X &bull; H A U T E &nbsp; C O U T U R E
             </span>
             <h1 className="font-serif text-3xl md:text-5xl text-white uppercase tracking-wider font-bold">
-              {selectedCategory
-                ? selectedCategory.replace("-", " ")
+              {selectedDepartment
+                ? selectedDepartment.replace("-", " ")
                 : "THE ATELIER COLLECTION"}
             </h1>
           </div>
@@ -286,7 +315,9 @@ const Shop: React.FC = () => {
         {searchTerm && (
           <p className="text-xs text-zinc-400 tracking-wider">
             SEARCH RESULTS FOR:{" "}
-            <span className="text-brand-gold font-serif italic">"{searchTerm}"</span>
+            <span className="text-brand-gold font-serif italic">
+              "{searchTerm}"
+            </span>
             <button
               onClick={handleClearSearch}
               className="ml-3 text-[10px] text-zinc-500 hover:text-white uppercase underline"
@@ -304,9 +335,9 @@ const Shop: React.FC = () => {
           {/* 1. Department Selector (From DB categoriesList) */}
           <div className="relative">
             <select
-              value={selectedCategory}
+              value={selectedDepartment}
               onChange={(e) => {
-                setSelectedCategory(e.target.value);
+                setSelectedDepartment(e.target.value);
                 setCurrentPage(1);
               }}
               className="bg-[#16161b] text-zinc-200 border border-zinc-800 hover:border-brand-gold px-3 py-1.5 pr-7 rounded-lg text-xs outline-none cursor-pointer appearance-none tracking-wider transition-colors"
@@ -315,7 +346,12 @@ const Shop: React.FC = () => {
               {(categoriesList.length > 0
                 ? categoriesList.map((c) => ({
                     id: c.slug || c.id || (c as any)._id,
-                    name: (c.title || (c as any).name || c.slug || "").toUpperCase(),
+                    name: (
+                      c.title ||
+                      (c as any).name ||
+                      c.slug ||
+                      ""
+                    ).toUpperCase(),
                   }))
                 : [
                     { id: "women", name: "WOMEN" },
@@ -335,17 +371,17 @@ const Shop: React.FC = () => {
           {/* 2. Collection Piece / Subcategory Selector */}
           <div className="relative">
             <select
-              value={selectedSubcategory}
+              value={selectedCategory}
               onChange={(e) => {
-                setSelectedSubcategory(e.target.value);
+                setSelectedCategory(e.target.value);
                 setCurrentPage(1);
               }}
               className="bg-[#16161b] text-zinc-200 border border-zinc-800 hover:border-brand-gold px-3 py-1.5 pr-7 rounded-lg text-xs outline-none cursor-pointer appearance-none tracking-wider transition-colors"
             >
               <option value="">ALL PIECES</option>
-              {subcategoryList.map((subcat) => (
-                <option key={subcat} value={subcat}>
-                  {subcat.toUpperCase()}
+              {subcategoryList.map((category) => (
+                <option key={category} value={category}>
+                  {category.toUpperCase()}
                 </option>
               ))}
             </select>
@@ -365,7 +401,14 @@ const Shop: React.FC = () => {
               <option value="">ALL MAISONS</option>
               {(brandsList.length > 0
                 ? brandsList.map((b) => b.name)
-                : ["Calvin Klein", "Gucci", "Zara", "Nike", "Tommy Hilfiger", "Levi's"]
+                : [
+                    "Calvin Klein",
+                    "Gucci",
+                    "Zara",
+                    "Nike",
+                    "Tommy Hilfiger",
+                    "Levi's",
+                  ]
               ).map((brandName) => (
                 <option key={brandName} value={brandName}>
                   {brandName.toUpperCase()}
@@ -401,7 +444,9 @@ const Shop: React.FC = () => {
             aria-label="Toggle Extended Filter Menu"
           >
             <SlidersHorizontal className="w-3 h-3" />
-            <span>{isFilterSidebarOpen ? "CLOSE FILTERS" : "EXTENDED FILTERS"}</span>
+            <span>
+              {isFilterSidebarOpen ? "CLOSE FILTERS" : "EXTENDED FILTERS"}
+            </span>
           </button>
         </div>
 
@@ -436,26 +481,26 @@ const Shop: React.FC = () => {
       </div>
 
       {/* Active Filter Badges */}
-      {(selectedCategory ||
-        selectedSubcategory ||
+      {(selectedDepartment ||
+        selectedCategory ||
         selectedBrand ||
         priceRange !== "all" ||
         selectedSize ||
         searchTerm) && (
         <div className="flex flex-wrap gap-2 items-center text-[10px] tracking-widest font-semibold pt-1">
           <span className="text-zinc-500 mr-1 uppercase">ACTIVE:</span>
-          {selectedCategory && (
+          {selectedDepartment && (
             <span className="bg-[#111116] border border-zinc-800 px-2.5 py-1 rounded flex items-center gap-1.5 uppercase text-zinc-300">
-              <span>Dept: {selectedCategory}</span>
-              <button onClick={() => setSelectedCategory("")}>
+              <span>Dept: {selectedDepartment}</span>
+              <button onClick={() => setSelectedDepartment("")}>
                 <X className="w-3 h-3 text-zinc-500 hover:text-white" />
               </button>
             </span>
           )}
-          {selectedSubcategory && (
+          {selectedCategory && (
             <span className="bg-[#111116] border border-brand-gold/40 text-brand-gold px-2.5 py-1 rounded flex items-center gap-1.5 uppercase">
-              <span>Piece: {selectedSubcategory}</span>
-              <button onClick={() => setSelectedSubcategory("")}>
+              <span>Piece: {selectedCategory}</span>
+              <button onClick={() => setSelectedCategory("")}>
                 <X className="w-3 h-3 text-brand-gold/60 hover:text-white" />
               </button>
             </span>
@@ -504,7 +549,8 @@ const Shop: React.FC = () => {
               Aurevilux Server Unreachable
             </h3>
             <p className="text-xs text-zinc-400 font-light leading-relaxed max-w-md mx-auto">
-              {errorMessage || "Unable to establish connection to Aurevilux server on http://localhost:5000."}
+              {errorMessage ||
+                "Unable to establish connection to Aurevilux server on http://localhost:5000."}
             </p>
           </div>
           <div className="pt-2">
@@ -513,7 +559,9 @@ const Shop: React.FC = () => {
               disabled={isLoading}
               className="inline-flex items-center space-x-2 px-6 py-2.5 bg-brand-burgundy hover:bg-brand-burgundyHover text-white rounded text-xs font-semibold tracking-widest transition-all disabled:opacity-50"
             >
-              <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`} />
+              <RefreshCw
+                className={`w-3.5 h-3.5 ${isLoading ? "animate-spin" : ""}`}
+              />
               <span>RETRY CONNECTION</span>
             </button>
           </div>
@@ -548,7 +596,9 @@ const Shop: React.FC = () => {
                     {allSizes.map((s) => (
                       <button
                         key={s}
-                        onClick={() => setSelectedSize(selectedSize === s ? "" : s)}
+                        onClick={() =>
+                          setSelectedSize(selectedSize === s ? "" : s)
+                        }
                         className={`text-xs px-2.5 py-1 rounded border transition-colors ${
                           selectedSize === s
                             ? "border-brand-gold text-brand-gold bg-brand-gold/10 font-bold"
@@ -609,7 +659,9 @@ const Shop: React.FC = () => {
             {isLoading ? (
               <div
                 className={`grid grid-cols-2 md:grid-cols-3 ${
-                  isFilterSidebarOpen ? "xl:grid-cols-4" : "xl:grid-cols-4 2xl:grid-cols-5"
+                  isFilterSidebarOpen
+                    ? "xl:grid-cols-4"
+                    : "xl:grid-cols-4 2xl:grid-cols-5"
                 } gap-5 w-full`}
               >
                 {Array.from({ length: 8 }).map((_, index) => (
@@ -642,7 +694,8 @@ const Shop: React.FC = () => {
                   No Couture Pieces Match Your Criteria
                 </h3>
                 <p className="text-xs text-zinc-500 font-light max-w-sm mx-auto">
-                  Try clearing active filters or refining your search parameters to view other pieces from the atelier.
+                  Try clearing active filters or refining your search parameters
+                  to view other pieces from the atelier.
                 </p>
                 <div className="pt-2">
                   <button
@@ -657,7 +710,9 @@ const Shop: React.FC = () => {
               /* 2. REAL COUTURE PRODUCTS GRID (Full width responsive layout) */
               <div
                 className={`grid grid-cols-2 md:grid-cols-3 ${
-                  isFilterSidebarOpen ? "xl:grid-cols-4" : "xl:grid-cols-4 2xl:grid-cols-5"
+                  isFilterSidebarOpen
+                    ? "xl:grid-cols-4"
+                    : "xl:grid-cols-4 2xl:grid-cols-5"
                 } gap-5 w-full`}
               >
                 {displayedProducts.map((product) => {
@@ -721,14 +776,16 @@ const Shop: React.FC = () => {
                         <div className="flex justify-between items-center pt-2 border-t border-zinc-900 text-xs">
                           <div className="flex items-center space-x-1">
                             {product.colors &&
-                              product.colors.slice(0, 3).map((c, i) => (
-                                <span
-                                  key={i}
-                                  style={{ backgroundColor: c.value }}
-                                  className="w-2.5 h-2.5 rounded-full border border-zinc-800"
-                                  title={c.name}
-                                />
-                              ))}
+                              product.colors
+                                .slice(0, 3)
+                                .map((c, i) => (
+                                  <span
+                                    key={i}
+                                    style={{ backgroundColor: c.value }}
+                                    className="w-2.5 h-2.5 rounded-full border border-zinc-800"
+                                    title={c.name}
+                                  />
+                                ))}
                           </div>
                           <div className="flex items-center space-x-1">
                             <Star className="w-2.5 h-2.5 fill-amber-500 text-amber-500" />
@@ -757,9 +814,12 @@ const Shop: React.FC = () => {
             {!isLoading && pagination.totalPages > 1 && (
               <div className="pt-12 pb-4 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-zinc-900 mt-10">
                 <span className="text-xs text-zinc-500 tracking-wider">
-                  Page <strong className="text-white">{pagination.page}</strong> of{" "}
-                  <strong className="text-white">{pagination.totalPages}</strong> (
-                  {pagination.total} pieces total)
+                  Page <strong className="text-white">{pagination.page}</strong>{" "}
+                  of{" "}
+                  <strong className="text-white">
+                    {pagination.totalPages}
+                  </strong>{" "}
+                  ({pagination.total} pieces total)
                 </span>
 
                 <div className="flex items-center space-x-1.5">
@@ -774,7 +834,10 @@ const Shop: React.FC = () => {
                   </button>
 
                   {/* Page Number Buttons */}
-                  {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map((p) => (
+                  {Array.from(
+                    { length: pagination.totalPages },
+                    (_, i) => i + 1,
+                  ).map((p) => (
                     <button
                       key={`page-${p}`}
                       onClick={() => handlePageChange(p)}

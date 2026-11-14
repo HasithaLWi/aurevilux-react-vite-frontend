@@ -224,17 +224,10 @@ export default function Admin() {
       // 8. Newsletter Subscribers
       try {
         const subs = await AdminService.getNewsletterSubscribers();
-        if (subs && subs.length > 0) {
-          setNewsletterSubscribers(subs);
-        } else {
-          setNewsletterSubscribers([
-            { _id: "s-1", email: "patron.vip@couture.com", isActive: true, subscribedAt: "2026-02-01" },
-            { _id: "s-2", email: "collector@geneva.ch", isActive: true, subscribedAt: "2026-02-04" },
-            { _id: "s-3", email: "director@milanofashion.it", isActive: true, subscribedAt: "2026-02-11" },
-          ]);
-        }
+        setNewsletterSubscribers(subs || []);
       } catch (e) {
         console.warn("Newsletter note:", e);
+        setNewsletterSubscribers([]);
       }
 
       // 9. Staff & Personnel
@@ -443,7 +436,10 @@ export default function Admin() {
         )}
 
         {activeTab === "newsletter" && (
-          <NewsletterTab subscribers={newsletterSubscribers} />
+          <NewsletterTab
+            subscribers={newsletterSubscribers}
+            setSubscribers={setNewsletterSubscribers}
+          />
         )}
 
         {activeTab === "staff" && (

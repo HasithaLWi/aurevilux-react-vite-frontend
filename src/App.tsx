@@ -16,6 +16,7 @@ import Brands from "./pages/Brands";
 import BrandDetail from "./pages/BrandDetail";
 import Login from "./pages/Login";
 import ResetPassword from "./pages/ResetPassword";
+import Unsubscribe from "./pages/Unsubscribe";
 
 // Dedicated Portals (Isolated Layouts)
 import Account from "./pages/Account";
@@ -58,6 +59,7 @@ function App() {
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Login initialTab="register" />} />
               <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/unsubscribe" element={<Unsubscribe />} />
             </Route>
 
             {/* Dedicated Customer Dashboard Portal (Separate Layout) */}
