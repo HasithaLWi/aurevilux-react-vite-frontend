@@ -54,7 +54,6 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
       return [...prevCart, { product, quantity, selectedColor: color, selectedSize: size }];
     });
-    setIsCartOpen(true);
   };
 
   const removeFromCart = (productId: string, color: string, size: string) => {

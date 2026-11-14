@@ -7,8 +7,10 @@
 // ----------------------------------------------------------------------------
 
 export type UserRole =
+  | "SUPERADMIN"
   | "SUPER_ADMIN"
   | "ADMIN"
+  | "STAFF"
   | "PRODUCT_MANAGER"
   | "ORDER_MANAGER"
   | "CUSTOMER_SUPPORT"
@@ -28,6 +30,16 @@ export interface SystemUser {
   memberSince?: string;
   avatarUrl?: string;
   token?: string;
+}
+
+export interface StaffInvite {
+  id: string;
+  email: string;
+  name: string;
+  role: UserRole | string;
+  token?: string;
+  expiresAt?: string;
+  accepted?: boolean;
 }
 
 export interface LoginCredentials {
@@ -63,6 +75,7 @@ export interface ProductReview {
 
 export interface Product {
   id: string;
+  _id?: string;
   name: string;
   slug: string;
   price: number;
@@ -70,6 +83,8 @@ export interface Product {
   reviewsCount: number;
   category: ProductCategory;
   categoryLabel: string;
+  department?: "men" | "women" | "accessories" | "new-arrivals" | "all";
+  subcategory?: string;
   description: string;
   longDescription: string;
   images: string[];
@@ -77,27 +92,96 @@ export interface Product {
   sizes: string[];
   brand: string;
   inStock: boolean;
+  stockCount?: number;
+  isActive?: boolean;
+  isDeleted?: boolean;
   isBestSeller: boolean;
   isNewArrival: boolean;
   specifications: ProductSpec[];
   reviews: ProductReview[];
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Brand {
   id: string;
+  _id?: string;
   name: string;
+  slug?: string;
   logo: string;
   campaignImage: string;
   description: string;
+  featured?: boolean;
+  isActive?: boolean;
+  isDeleted?: boolean;
+}
+
+export interface BrandApp {
+  id: string;
+  _id?: string;
+  brandName?: string;
+  name?: string;
+  contactName?: string;
+  designer?: string;
+  category?: string;
+  email?: string;
+  contactEmail?: string;
+  story?: string;
+  phone?: string;
+  website?: string;
+  country?: string;
+  status: "Pending" | "Approved" | "Rejected";
+  date?: string;
+  notes?: string;
 }
 
 export interface Category {
   id: string;
+  _id?: string;
   title: string;
+  slug?: string;
+  department?: "men" | "women" | "accessories" | "new-arrivals" | "all";
+  parentCategory?: string;
+  subcategories?: string[];
   description: string;
   image: string;
   link: string;
   buttonText: string;
+  isActive?: boolean;
+}
+
+export interface WebsiteFeedback {
+  _id: string;
+  id?: string;
+  name: string;
+  email: string;
+  role?: string;
+  rating: number;
+  comment: string;
+  isFeatured: boolean;
+  status: "pending" | "approved" | "archived";
+  createdAt: string;
+}
+
+export interface NewsletterSubscriber {
+  _id: string;
+  id?: string;
+  email: string;
+  isActive: boolean;
+  subscribedAt: string;
+}
+
+export interface CustomerRecord {
+  _id: string;
+  name: string;
+  email: string;
+  username: string;
+  avatarUrl?: string;
+  authProvider: "local" | "google";
+  isActive: boolean;
+  createdAt: string;
+  ordersCount: number;
+  totalSpend: number;
 }
 
 // ----------------------------------------------------------------------------
@@ -111,8 +195,132 @@ export interface CartItem {
   selectedSize: string;
 }
 
+export interface OrderItem {
+  id?: string;
+  productId?: string;
+  name: string;
+  brand: string;
+  price: number;
+  quantity: number;
+  selectedColor?: string;
+  selectedSize?: string;
+  color?: string;
+  size?: string;
+  image?: string;
+}
+
+export interface TimelineStep {
+  title?: string;
+  status?: string;
+  date: string;
+  description?: string;
+  completed: boolean;
+}
+
+export type OrderStatus =
+  | "Pending"
+  | "Processing"
+  | "In Transit"
+  | "Out for Delivery"
+  | "Delivered"
+  | "Cancelled"
+  | "Refunded";
+
+export interface Order {
+  id: string;
+  _id?: string;
+  orderNumber?: string;
+  date?: string;
+  createdAt?: string;
+  status: OrderStatus | string;
+  total: number;
+  itemsCount: number;
+  name?: string;
+  email?: string;
+  contactEmail?: string;
+  story?: string;
+  phone?: string;
+  customer?: {
+    name: string;
+    email: string;
+    phone?: string;
+  };
+  address?: string;
+  shippingAddress?: {
+    street: string;
+    city: string;
+    state?: string;
+    postalCode: string;
+    country: string;
+  };
+  carrier?: string;
+  trackingNumber?: string;
+  estimatedDelivery?: string;
+  items: OrderItem[];
+  timeline: TimelineStep[];
+}
+
 // ----------------------------------------------------------------------------
-// 4. MARKETING & UI CONTENT
+// 4. CUSTOMER ACCOUNT & PROFILE
+// ----------------------------------------------------------------------------
+
+export interface UserProfile {
+  name: string;
+  email: string;
+  username?: string;
+  phone: string;
+  address: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+  password?: string;
+  tier: string;
+  memberSince: string;
+  birthday?: string;
+  gender?: string;
+  avatarUrl: string;
+  authProvider?: "local" | "google";
+  savedAddresses?: SavedAddress[];
+  savedCards?: PaymentMethodCard[];
+}
+
+export interface SavedAddress {
+  id: string;
+  _id?: string;
+  type: "Home" | "Office" | "Other";
+  isDefault: boolean;
+  name: string;
+  street: string;
+  city: string;
+  postalCode: string;
+  country: string;
+  phone: string;
+}
+
+export interface PaymentMethodCard {
+  id: string;
+  _id?: string;
+  brand: "visa" | "mastercard" | "amex" | "generic";
+  cardNumber: string; // Masked (e.g. "**** **** **** 4521")
+  expiry: string;
+  cardHolder: string;
+  isDefault: boolean;
+}
+
+export interface ReturnRequest {
+  id: string;
+  orderId: string;
+  customerName: string;
+  email: string;
+  reason: string;
+  status: "Pending" | "Approved" | "Rejected";
+  date: string;
+  amount: number;
+}
+
+// ----------------------------------------------------------------------------
+// 5. MARKETING & UI CONTENT
 // ----------------------------------------------------------------------------
 
 export interface Testimonial {

@@ -1,5 +1,6 @@
 export interface Product {
   id: string;
+  _id?: string;
   name: string;
   slug: string;
   price: number;
@@ -7,6 +8,8 @@ export interface Product {
   reviewsCount: number;
   category: "women" | "men" | "accessories" | "new-arrivals";
   categoryLabel: string;
+  department?: "women" | "men" | "accessories" | "new-arrivals" | "all";
+  subcategory?: string;
   description: string;
   longDescription: string;
   images: string[];
@@ -14,6 +17,9 @@ export interface Product {
   sizes: string[];
   brand: string;
   inStock: boolean;
+  stockCount?: number;
+  isActive?: boolean;
+  isDeleted?: boolean;
   isBestSeller: boolean;
   isNewArrival: boolean;
   specifications: { label: string; value: string }[];
@@ -28,10 +34,13 @@ export interface Product {
 
 export interface Brand {
   id: string;
+  _id?: string;
   name: string;
   logo: string;
   campaignImage: string;
   description: string;
+  isActive?: boolean;
+  isDeleted?: boolean;
 }
 
 export interface Testimonial {
@@ -65,7 +74,12 @@ export interface Benefit {
 
 export interface Category {
   id: string;
+  _id?: string;
   title: string;
+  slug?: string;
+  department?: string;
+  parentCategory?: string;
+  subcategories?: string[];
   description: string;
   image: string;
   link: string;

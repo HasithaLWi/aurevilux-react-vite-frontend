@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { X, Lock, User, Mail, Eye, EyeOff, CheckCircle2, AlertCircle } from "lucide-react";
 import { AuthService } from "../../services/auth.service";
 
@@ -9,6 +10,7 @@ interface AuthModalProps {
 }
 
 const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => {
+  const navigate = useNavigate();
   const [mode, setMode] = useState<"login" | "register">("login");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -29,11 +31,21 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
 
     try {
       const data = await AuthService.login({ username: username.trim(), password });
+      const roles = data.roles || [];
+      const isStaffOrAdmin = roles.some((r: string) =>
+        ["SUPERADMIN", "SUPER_ADMIN", "ADMIN", "STAFF"].includes(r)
+      );
+
       setSuccessMessage(`Welcome back, ${data.username}! Sign in successful.`);
       setTimeout(() => {
         onSuccess?.();
         onClose();
-      }, 1000);
+        if (isStaffOrAdmin) {
+          navigate("/admin");
+        } else {
+          navigate("/account");
+        }
+      }, 900);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to connect to backend server.";
       setErrorMessage(msg);

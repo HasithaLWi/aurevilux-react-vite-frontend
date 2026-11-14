@@ -1,6 +1,17 @@
 import { useState, useEffect, useRef } from "react";
-import { Link, useLocation } from "react-router-dom";
-import { Menu, Search, ShoppingBag, X, ArrowRight, User, LogOut, Trash2 } from "lucide-react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import {
+  Menu,
+  Search,
+  ShoppingBag,
+  X,
+  ArrowRight,
+  User,
+  LogOut,
+  Trash2,
+  Heart,
+  ShieldCheck,
+} from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { AuthService } from "../../services/auth.service";
 import AuthModal from "../auth/AuthModal";
@@ -8,14 +19,21 @@ import { gsap, useGSAP, motionTokens } from "../../animations";
 
 const NavBar = () => {
   const location = useLocation();
-  const { cart, cartCount, cartTotal, removeFromCart, updateCartQuantity } = useApp();
+  const navigate = useNavigate();
+  const { cart, cartCount, cartTotal, removeFromCart, updateCartQuantity } =
+    useApp();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [currentUser, setCurrentUser] = useState<{ username: string; roles: string[] } | null>(null);
+  const [currentUser, setCurrentUser] = useState<{
+    username: string;
+    roles: string[];
+    name?: string;
+    avatarUrl?: string;
+  } | null>(null);
 
   const cartDrawerRef = useRef<HTMLDivElement>(null);
   const searchOverlayRef = useRef<HTMLDivElement>(null);
@@ -24,76 +42,127 @@ const NavBar = () => {
   // Cart Drawer Animation
   useGSAP(
     () => {
-      if (!isCartOpen || window.matchMedia(motionTokens.mediaQueries.reducedMotion).matches) return;
+      if (
+        !isCartOpen ||
+        window.matchMedia(motionTokens.mediaQueries.reducedMotion).matches
+      )
+        return;
 
-      const tl = gsap.timeline({ defaults: { ease: motionTokens.ease.editorial } });
+      const tl = gsap.timeline({
+        defaults: { ease: motionTokens.ease.editorial },
+      });
       tl.fromTo(
         "[data-cart-backdrop]",
         { opacity: 0 },
-        { opacity: 1, duration: motionTokens.duration.fast, ease: motionTokens.ease.smooth }
+        {
+          opacity: 1,
+          duration: motionTokens.duration.fast,
+          ease: motionTokens.ease.smooth,
+        },
       )
         .fromTo(
           "[data-cart-panel]",
           { xPercent: 100 },
-          { xPercent: 0, duration: motionTokens.duration.standard, ease: motionTokens.ease.editorial },
-          0
+          {
+            xPercent: 0,
+            duration: motionTokens.duration.standard,
+            ease: motionTokens.ease.editorial,
+          },
+          0,
         )
         .fromTo(
           "[data-cart-item]",
           { opacity: 0, y: 12 },
-          { opacity: 1, y: 0, duration: motionTokens.duration.fast, stagger: motionTokens.stagger.tight },
-          "-=0.15"
+          {
+            opacity: 1,
+            y: 0,
+            duration: motionTokens.duration.fast,
+            stagger: motionTokens.stagger.tight,
+          },
+          "-=0.15",
         );
     },
-    { scope: cartDrawerRef, dependencies: [isCartOpen] }
+    { scope: cartDrawerRef, dependencies: [isCartOpen] },
   );
 
   // Search Overlay Animation
   useGSAP(
     () => {
-      if (!isSearchOpen || window.matchMedia(motionTokens.mediaQueries.reducedMotion).matches) return;
+      if (
+        !isSearchOpen ||
+        window.matchMedia(motionTokens.mediaQueries.reducedMotion).matches
+      )
+        return;
 
-      const tl = gsap.timeline({ defaults: { ease: motionTokens.ease.editorial } });
+      const tl = gsap.timeline({
+        defaults: { ease: motionTokens.ease.editorial },
+      });
       tl.fromTo(
         "[data-search-backdrop]",
         { opacity: 0 },
-        { opacity: 1, duration: motionTokens.duration.fast, ease: motionTokens.ease.smooth }
+        {
+          opacity: 1,
+          duration: motionTokens.duration.fast,
+          ease: motionTokens.ease.smooth,
+        },
       ).fromTo(
         "[data-search-panel]",
         { y: -30, opacity: 0 },
-        { y: 0, opacity: 1, duration: motionTokens.duration.standard, ease: motionTokens.ease.editorial },
-        0
+        {
+          y: 0,
+          opacity: 1,
+          duration: motionTokens.duration.standard,
+          ease: motionTokens.ease.editorial,
+        },
+        0,
       );
     },
-    { scope: searchOverlayRef, dependencies: [isSearchOpen] }
+    { scope: searchOverlayRef, dependencies: [isSearchOpen] },
   );
 
   // Mobile Menu Drawer Animation
   useGSAP(
     () => {
-      if (!isMobileMenuOpen || window.matchMedia(motionTokens.mediaQueries.reducedMotion).matches) return;
+      if (
+        !isMobileMenuOpen ||
+        window.matchMedia(motionTokens.mediaQueries.reducedMotion).matches
+      )
+        return;
 
-      const tl = gsap.timeline({ defaults: { ease: motionTokens.ease.editorial } });
+      const tl = gsap.timeline({
+        defaults: { ease: motionTokens.ease.editorial },
+      });
       tl.fromTo(
         "[data-mobile-backdrop]",
         { opacity: 0 },
-        { opacity: 1, duration: motionTokens.duration.fast, ease: motionTokens.ease.smooth }
+        {
+          opacity: 1,
+          duration: motionTokens.duration.fast,
+          ease: motionTokens.ease.smooth,
+        },
       ).fromTo(
         "[data-mobile-panel]",
         { xPercent: -100 },
-        { xPercent: 0, duration: motionTokens.duration.standard, ease: motionTokens.ease.editorial },
-        0
+        {
+          xPercent: 0,
+          duration: motionTokens.duration.standard,
+          ease: motionTokens.ease.editorial,
+        },
+        0,
       );
     },
-    { scope: mobileMenuRef, dependencies: [isMobileMenuOpen] }
+    { scope: mobileMenuRef, dependencies: [isMobileMenuOpen] },
   );
 
   // Sync auth state
   useEffect(() => {
-    const user = AuthService.getStoredUser();
-    if (user) {
-      setCurrentUser(user);
-    }
+    const syncUser = () => {
+      const user = AuthService.getStoredUser();
+      setCurrentUser(user || null);
+    };
+    syncUser();
+    window.addEventListener("storage", syncUser);
+    return () => window.removeEventListener("storage", syncUser);
   }, []);
 
   const handleAuthSuccess = () => {
@@ -106,19 +175,18 @@ const NavBar = () => {
     setCurrentUser(null);
   };
 
-
   const navLinks = [
     { name: "HOME", href: "/" },
     { name: "SHOP", href: "/shop" },
-    { name: "BRANDS", href: "/#brands" },
+    { name: "BRANDS", href: "/brands" },
+    { name: "WISHLIST", href: "/wishlist" },
     { name: "LOOKBOOK", href: "/#lookbook" },
-    { name: "CONCIERGE", href: "/#contact" },
   ];
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      window.location.href = `/shop?search=${encodeURIComponent(searchQuery.trim())}`;
+      navigate(`/shop?search=${encodeURIComponent(searchQuery.trim())}`);
       setIsSearchOpen(false);
       setSearchQuery("");
     }
@@ -181,13 +249,51 @@ const NavBar = () => {
             <Search className="w-[18px] h-[18px]" />
           </button>
 
-          {/* User Sign In / Profile Button */}
+          {/* Wishlist Link */}
+          <Link
+            to="/wishlist"
+            className="text-zinc-300 hover:text-brand-gold transition-colors duration-200 hidden sm:flex items-center"
+            aria-label="Wishlist"
+          >
+            <Heart className="w-[18px] h-[18px]" />
+          </Link>
+
+          {/* Staff Management Direct Portal Link */}
+          {currentUser &&
+            currentUser.roles?.some((r) =>
+              ["SUPERADMIN", "SUPER_ADMIN", "ADMIN", "STAFF"].includes(r)
+            ) && (
+              <Link
+                to="/admin"
+                className="hidden lg:flex items-center space-x-1 px-3 py-1 bg-brand-gold/15 border border-brand-gold/40 text-brand-gold rounded hover:bg-brand-gold/25 transition-colors text-[10px] tracking-widest font-semibold uppercase"
+                title="Atelier Management Console"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-brand-gold" />
+                <span>MANAGEMENT</span>
+              </Link>
+            )}
+
+          {/* User Sign In / Profile Button (Always navigates to /account) */}
           {currentUser ? (
             <div className="flex items-center space-x-2 bg-brand-dark/60 border border-zinc-800 px-3 py-1.5 rounded">
-              <User className="w-3.5 h-3.5 text-brand-gold" />
-              <span className="text-[10px] tracking-widest text-white uppercase font-semibold">
-                {currentUser.username}
-              </span>
+              <Link
+                to="/account"
+                className="flex items-center space-x-1.5 hover:text-brand-gold transition-colors"
+                title="Client Suite & Account"
+              >
+                {currentUser.avatarUrl ? (
+                  <img
+                    src={currentUser.avatarUrl}
+                    alt={currentUser.name || currentUser.username}
+                    className="w-4 h-4 rounded-full object-cover border border-brand-gold/40"
+                  />
+                ) : (
+                  <User className="w-3.5 h-3.5 text-brand-gold" />
+                )}
+                <span className="text-[10px] tracking-widest text-white uppercase font-semibold">
+                  {currentUser.name ? currentUser.name.split(" ")[0] : currentUser.username}
+                </span>
+              </Link>
               <button
                 type="button"
                 onClick={handleLogout}
@@ -198,20 +304,18 @@ const NavBar = () => {
               </button>
             </div>
           ) : (
-            <button
-              type="button"
-              onClick={() => setIsAuthOpen(true)}
+            <Link
+              to="/login"
               className="flex items-center space-x-1.5 text-zinc-300 hover:text-brand-gold transition-colors duration-200 text-[10px] tracking-[0.2em] font-medium"
             >
               <User className="w-[18px] h-[18px]" />
               <span className="hidden sm:inline">SIGN IN</span>
-            </button>
+            </Link>
           )}
 
-          {/* Cart / Bag Icon */}
-          <button
-            type="button"
-            onClick={() => setIsCartOpen(true)}
+          {/* Cart / Bag Link - Direct navigation to full-page shopping cart */}
+          <Link
+            to="/cart"
             className="relative text-zinc-300 hover:text-brand-gold transition-colors duration-200 flex items-center"
             aria-label="Shopping Bag"
           >
@@ -221,7 +325,7 @@ const NavBar = () => {
                 {cartCount}
               </span>
             )}
-          </button>
+          </Link>
         </div>
       </header>
 
@@ -242,7 +346,10 @@ const NavBar = () => {
           />
 
           <div className="absolute inset-y-0 right-0 max-w-full flex">
-            <div data-cart-panel className="w-screen max-w-md bg-brand-dark border-l border-zinc-800 flex flex-col justify-between p-6 gpu-accelerated">
+            <div
+              data-cart-panel
+              className="w-screen max-w-md bg-brand-dark border-l border-zinc-800 flex flex-col justify-between p-6 gpu-accelerated"
+            >
               {/* Drawer Header */}
               <div className="flex items-center justify-between pb-6 border-b border-zinc-800">
                 <div>
@@ -273,7 +380,8 @@ const NavBar = () => {
                     YOUR BAG IS EMPTY
                   </h3>
                   <p className="text-xs text-zinc-500 font-light max-w-xs leading-relaxed">
-                    Items selected from our private couture runway and atelier will appear here.
+                    Items selected from our private couture runway and atelier
+                    will appear here.
                   </p>
                   <Link
                     to="/shop"
@@ -314,21 +422,23 @@ const NavBar = () => {
                                   item.product.id,
                                   item.selectedColor,
                                   item.selectedSize,
-                                  item.quantity - 1
+                                  item.quantity - 1,
                                 )
                               }
                               className="text-zinc-400 hover:text-white px-1 text-xs"
                             >
                               -
                             </button>
-                            <span className="text-xs text-white">{item.quantity}</span>
+                            <span className="text-xs text-white">
+                              {item.quantity}
+                            </span>
                             <button
                               onClick={() =>
                                 updateCartQuantity(
                                   item.product.id,
                                   item.selectedColor,
                                   item.selectedSize,
-                                  item.quantity + 1
+                                  item.quantity + 1,
                                 )
                               }
                               className="text-zinc-400 hover:text-white px-1 text-xs"
@@ -338,14 +448,17 @@ const NavBar = () => {
                           </div>
                           <div className="flex items-center space-x-3">
                             <span className="text-xs text-brand-gold font-semibold">
-                              ${(item.product.price * item.quantity).toLocaleString()}
+                              $
+                              {(
+                                item.product.price * item.quantity
+                              ).toLocaleString()}
                             </span>
                             <button
                               onClick={() =>
                                 removeFromCart(
                                   item.product.id,
                                   item.selectedColor,
-                                  item.selectedSize
+                                  item.selectedSize,
                                 )
                               }
                               className="text-zinc-600 hover:text-red-400"
@@ -362,17 +475,26 @@ const NavBar = () => {
 
               {/* Drawer Footer */}
               {cart.length > 0 && (
-                <div className="pt-6 border-t border-zinc-800 space-y-4">
+                <div className="pt-6 border-t border-zinc-800 space-y-3">
                   <div className="flex justify-between text-xs tracking-widest">
                     <span className="text-zinc-400 uppercase">SUBTOTAL</span>
-                    <span className="text-white font-semibold">${cartTotal.toLocaleString()}</span>
+                    <span className="text-brand-gold font-serif font-bold text-sm">
+                      ${cartTotal.toLocaleString()}
+                    </span>
                   </div>
+                  <Link
+                    to="/cart"
+                    onClick={() => setIsCartOpen(false)}
+                    className="w-full block text-center bg-brand-burgundy hover:bg-brand-burgundyHover text-white py-3 rounded text-xs font-bold tracking-[0.2em] transition-all uppercase shadow-lg shadow-brand-burgundy/15"
+                  >
+                    VIEW BAG &amp; CHECKOUT
+                  </Link>
                   <Link
                     to="/shop"
                     onClick={() => setIsCartOpen(false)}
-                    className="w-full block text-center bg-brand-burgundy hover:bg-brand-burgundyHover text-white py-3.5 rounded text-xs font-bold tracking-[0.2em] transition-all uppercase"
+                    className="w-full block text-center border border-zinc-800 hover:border-zinc-700 text-zinc-400 hover:text-white py-2.5 rounded text-[10px] font-semibold tracking-[0.2em] transition-all uppercase"
                   >
-                    CONTINUE TO SHOP
+                    CONTINUE BROWSING
                   </Link>
                   <p className="text-[9px] text-zinc-600 text-center tracking-widest uppercase">
                     COMPLIMENTARY WHITE-GLOVE PACKAGING &amp; WORLDWIDE SHIPPING
@@ -386,14 +508,20 @@ const NavBar = () => {
 
       {/* Top Search Drawer Overlay */}
       {isSearchOpen && (
-        <div ref={searchOverlayRef} className="fixed inset-0 z-50 overflow-hidden">
+        <div
+          ref={searchOverlayRef}
+          className="fixed inset-0 z-50 overflow-hidden"
+        >
           <div
             data-search-backdrop
             onClick={() => setIsSearchOpen(false)}
             className="absolute inset-0 bg-black/85 backdrop-blur-md transition-opacity"
           />
 
-          <div data-search-panel className="absolute top-0 left-0 right-0 bg-brand-dark border-b border-zinc-800 py-10 px-6 md:px-12 gpu-accelerated">
+          <div
+            data-search-panel
+            className="absolute top-0 left-0 right-0 bg-brand-dark border-b border-zinc-800 py-10 px-6 md:px-12 gpu-accelerated"
+          >
             <div className="max-w-3xl mx-auto flex flex-col space-y-5">
               <div className="flex justify-between items-center">
                 <span className="text-xs tracking-[0.25em] text-brand-gold font-medium uppercase">
@@ -409,7 +537,10 @@ const NavBar = () => {
                 </button>
               </div>
 
-              <form onSubmit={handleSearchSubmit} className="relative flex items-center">
+              <form
+                onSubmit={handleSearchSubmit}
+                className="relative flex items-center"
+              >
                 <input
                   type="text"
                   placeholder="WHAT ARE YOU LOOKING FOR?"
@@ -433,7 +564,10 @@ const NavBar = () => {
 
       {/* Mobile Drawer Menu */}
       {isMobileMenuOpen && (
-        <div ref={mobileMenuRef} className="fixed inset-0 z-50 overflow-hidden md:hidden">
+        <div
+          ref={mobileMenuRef}
+          className="fixed inset-0 z-50 overflow-hidden md:hidden"
+        >
           <div
             data-mobile-backdrop
             onClick={() => setIsMobileMenuOpen(false)}
@@ -441,7 +575,10 @@ const NavBar = () => {
           />
 
           <div className="absolute inset-y-0 left-0 max-w-full flex">
-            <div data-mobile-panel className="w-screen max-w-xs bg-brand-dark border-r border-zinc-800 flex flex-col justify-between p-6 gpu-accelerated">
+            <div
+              data-mobile-panel
+              className="w-screen max-w-xs bg-brand-dark border-r border-zinc-800 flex flex-col justify-between p-6 gpu-accelerated"
+            >
               <div>
                 <div className="flex justify-between items-center pb-6 border-b border-zinc-900">
                   <span className="font-serif tracking-[0.25em] text-lg text-white">
@@ -468,16 +605,57 @@ const NavBar = () => {
                       {link.name}
                     </Link>
                   ))}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      setIsAuthOpen(true);
-                    }}
-                    className="text-left text-brand-gold pt-4 border-t border-zinc-900"
-                  >
-                    {currentUser ? `LOGGED IN: ${currentUser.username}` : "CLIENT SIGN IN &rarr;"}
-                  </button>
+                  {currentUser ? (
+                    <div className="space-y-3 pt-4 border-t border-zinc-900">
+                      <Link
+                        to="/account"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="text-brand-gold flex items-center space-x-2 text-xs"
+                      >
+                        {currentUser.avatarUrl ? (
+                          <img
+                            src={currentUser.avatarUrl}
+                            alt={currentUser.name || currentUser.username}
+                            className="w-4 h-4 rounded-full object-cover border border-brand-gold/40"
+                          />
+                        ) : (
+                          <User className="w-4 h-4 text-brand-gold" />
+                        )}
+                        <span>ACCOUNT: {(currentUser.name || currentUser.username).toUpperCase()}</span>
+                      </Link>
+                      {currentUser.roles?.some((r) =>
+                        ["SUPERADMIN", "SUPER_ADMIN", "ADMIN", "STAFF"].includes(r)
+                      ) && (
+                        <Link
+                          to="/admin"
+                          onClick={() => setIsMobileMenuOpen(false)}
+                          className="text-brand-gold/80 flex items-center space-x-2 text-[11px]"
+                        >
+                          <ShieldCheck className="w-4 h-4 text-brand-gold" />
+                          <span>ATELIER MANAGEMENT CONSOLE &rarr;</span>
+                        </Link>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleLogout();
+                          setIsMobileMenuOpen(false);
+                        }}
+                        className="text-zinc-500 hover:text-red-400 text-left block text-[11px]"
+                      >
+                        SIGN OUT
+                      </button>
+                    </div>
+                  ) : (
+                    <Link
+                      to="/login"
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="text-left text-brand-gold pt-4 border-t border-zinc-900 flex items-center space-x-1"
+                    >
+                      <User className="w-3.5 h-3.5" />
+                      <span>CLIENT &amp; ATELIER SIGN IN &rarr;</span>
+                    </Link>
+                  )}
                 </nav>
               </div>
 

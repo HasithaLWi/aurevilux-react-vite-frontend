@@ -1,7 +1,12 @@
 import React, { useRef, useState, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, ChevronLeft, ChevronRight } from "lucide-react";
-import { gsap, ScrollTrigger, useGSAP, motionTokens } from "../../../animations";
+import {
+  gsap,
+  ScrollTrigger,
+  useGSAP,
+  motionTokens,
+} from "../../../animations";
 import { COLLECTION_SCENES, type CollectionSceneData } from "./collectionData";
 
 const NewCollection: React.FC = () => {
@@ -45,7 +50,7 @@ const NewCollection: React.FC = () => {
           duration: 0.75,
           ease: "power3.out",
           clearProps: "filter",
-        }
+        },
       );
     }
 
@@ -64,7 +69,7 @@ const NewCollection: React.FC = () => {
           stagger: 0.06,
           ease: "power2.out",
           clearProps: "opacity,transform",
-        }
+        },
       );
     }
 
@@ -73,7 +78,7 @@ const NewCollection: React.FC = () => {
       gsap.fromTo(
         rightContentRef.current,
         { opacity: 0, x: 15 },
-        { opacity: 1, x: 0, duration: 0.45, ease: "power2.out" }
+        { opacity: 1, x: 0, duration: 0.45, ease: "power2.out" },
       );
     }
   }, []);
@@ -81,30 +86,38 @@ const NewCollection: React.FC = () => {
   const isNavigatingRef = useRef(false);
 
   // Direct selection of a collection scene
-  const goToScene = useCallback((index: number) => {
-    const clampedIndex = Math.max(0, Math.min(index, COLLECTION_SCENES.length - 1));
-    if (clampedIndex === activeIndexRef.current) return;
+  const goToScene = useCallback(
+    (index: number) => {
+      const clampedIndex = Math.max(
+        0,
+        Math.min(index, COLLECTION_SCENES.length - 1),
+      );
+      if (clampedIndex === activeIndexRef.current) return;
 
-    // Suppress intermediate scrub events so the target scene loads directly
-    isNavigatingRef.current = true;
-    animateSceneTransition(clampedIndex);
+      // Suppress intermediate scrub events so the target scene loads directly
+      isNavigatingRef.current = true;
+      animateSceneTransition(clampedIndex);
 
-    const st = scrollTriggerInstanceRef.current;
-    if (st) {
-      const scrollDistance = st.end - st.start;
-      const targetScroll = st.start + (clampedIndex / (COLLECTION_SCENES.length - 1)) * scrollDistance;
-      
-      // Set window scroll position directly to the target scene
-      window.scrollTo({ top: targetScroll, behavior: "instant" });
+      const st = scrollTriggerInstanceRef.current;
+      if (st) {
+        const scrollDistance = st.end - st.start;
+        const targetScroll =
+          st.start +
+          (clampedIndex / (COLLECTION_SCENES.length - 1)) * scrollDistance;
 
-      // Release suppression after the browser finishes updating scroll
-      setTimeout(() => {
+        // Set window scroll position directly to the target scene
+        window.scrollTo({ top: targetScroll, behavior: "instant" });
+
+        // Release suppression after the browser finishes updating scroll
+        setTimeout(() => {
+          isNavigatingRef.current = false;
+        }, 120);
+      } else {
         isNavigatingRef.current = false;
-      }, 120);
-    } else {
-      isNavigatingRef.current = false;
-    }
-  }, [animateSceneTransition]);
+      }
+    },
+    [animateSceneTransition],
+  );
 
   // Master GSAP ScrollTrigger Pinned Scene Sequence + Entrance Reveal
   useGSAP(
@@ -136,7 +149,7 @@ const NewCollection: React.FC = () => {
             duration: 1.1,
             ease: "power2.out",
             clearProps: "opacity,transform",
-          }
+          },
         )
         // Centerpiece Model Signature Rise from Below
         .fromTo(
@@ -156,7 +169,7 @@ const NewCollection: React.FC = () => {
             ease: "power3.out",
             clearProps: "filter",
           },
-          "-=0.9"
+          "-=0.9",
         )
         // Left Editorial Info (eyebrow, title, copy, button)
         .fromTo(
@@ -173,7 +186,7 @@ const NewCollection: React.FC = () => {
             ease: "power2.out",
             clearProps: "opacity,transform",
           },
-          "-=0.7"
+          "-=0.7",
         )
         // Right Narrative (season badge, quote, counter, chevrons)
         .fromTo(
@@ -189,7 +202,7 @@ const NewCollection: React.FC = () => {
             ease: "power2.out",
             clearProps: "opacity,transform",
           },
-          "-=0.5"
+          "-=0.5",
         )
         // Bottom 5 Thumbnails Staggered Lift
         .fromTo(
@@ -206,7 +219,7 @@ const NewCollection: React.FC = () => {
             ease: "power2.out",
             clearProps: "transform",
           },
-          "-=0.4"
+          "-=0.4",
         )
         // Bottom Indicators (Scroll to explore + progress)
         .fromTo(
@@ -221,7 +234,7 @@ const NewCollection: React.FC = () => {
             duration: 0.5,
             clearProps: "opacity,transform",
           },
-          "-=0.3"
+          "-=0.3",
         );
 
       // 2. Master Pinned Sequence for 5 scenes
@@ -244,7 +257,7 @@ const NewCollection: React.FC = () => {
           // Segment progress evenly across 5 scenes: [0..0.2), [0.2..0.4), etc.
           const rawIndex = Math.min(
             totalScenes - 1,
-            Math.floor(progress * totalScenes)
+            Math.floor(progress * totalScenes),
           );
 
           if (rawIndex !== activeIndexRef.current) {
@@ -260,7 +273,7 @@ const NewCollection: React.FC = () => {
         st.kill();
       };
     },
-    { scope: triggerRef, dependencies: [animateSceneTransition] }
+    { scope: triggerRef, dependencies: [animateSceneTransition] },
   );
 
   return (
@@ -298,7 +311,7 @@ const NewCollection: React.FC = () => {
         </div>
 
         {/* Centerpiece Hero Model Cutout (Signature Model Rise Illusion) */}
-        <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+        <div className="absolute inset-0 z-10 flex items-end justify-center pointer-events-none">
           <img
             ref={modelRef}
             src={activeScene.modelImage}
@@ -310,7 +323,10 @@ const NewCollection: React.FC = () => {
         {/* Main Stage Grid (Left Editorial + Right Narrative) */}
         <div className="relative z-20 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
           {/* Left Column: Collection Information */}
-          <div ref={leftContentRef} className="lg:col-span-7 space-y-3 md:space-y-4">
+          <div
+            ref={leftContentRef}
+            className="lg:col-span-7 space-y-3 md:space-y-4"
+          >
             <div className="flex items-center space-x-2">
               <div className="w-6 h-[1px] bg-brand-burgundy" />
               <span className="text-[10px] md:text-xs tracking-[0.3em] text-brand-gold font-semibold uppercase">
@@ -355,7 +371,10 @@ const NewCollection: React.FC = () => {
             {/* Direct Navigation Chevrons + Number */}
             <div className="flex items-center space-x-3 pt-1">
               <span className="text-xs tracking-[0.25em] text-zinc-400 font-mono">
-                <span className="text-brand-gold font-bold">{activeScene.number}</span> / 05
+                <span className="text-brand-gold font-bold">
+                  {activeScene.number}
+                </span>{" "}
+                / 05
               </span>
 
               <div className="flex items-center space-x-1">
@@ -381,83 +400,93 @@ const NewCollection: React.FC = () => {
         </div>
 
         {/* Bottom Section: 5 Collection Thumbnails */}
-        <div className="relative z-20 max-w-7xl mx-auto w-full pt-4">
-          <div className="grid grid-cols-5 gap-2 sm:gap-3 md:gap-4 items-end">
-            {COLLECTION_SCENES.map((scene, idx) => {
-              const isActive = idx === activeIndex;
-              return (
-                <button
-                  key={scene.id}
-                  data-thumbnail-card
-                  onClick={() => goToScene(idx)}
-                  className={`group relative text-left rounded overflow-hidden transition-all duration-500 focus:outline-none ${
-                    isActive
-                      ? "ring-1 sm:ring-2 ring-brand-gold shadow-[0_0_25px_rgba(212,175,55,0.3)] scale-[1.03] md:scale-105 z-10"
-                      : "opacity-60 hover:opacity-100 border border-zinc-800/80 hover:border-zinc-700"
-                  }`}
-                >
-                  {/* Thumbnail Image Container */}
-                  <div className="aspect-[4/5] sm:aspect-[3/4] w-full overflow-hidden bg-zinc-950 relative">
-                    <img
-                      src={scene.thumbnail}
-                      alt={scene.name}
-                      className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-brand-black via-brand-black/40 to-transparent" />
-
-                    {/* Active Golden Highlight Bar */}
-                    {isActive && (
-                      <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-brand-gold to-transparent" />
-                    )}
-                  </div>
-
-                  {/* Thumbnail Label Details */}
-                  <div className="p-1.5 sm:p-2 bg-zinc-950/90 backdrop-blur-sm space-y-0.5">
-                    <span
-                      className={`block text-[8px] sm:text-[9px] tracking-[0.2em] font-mono ${
-                        isActive ? "text-brand-gold font-bold" : "text-zinc-500"
-                      }`}
-                    >
-                      {scene.number}
-                    </span>
-                    <h4
-                      className={`text-[8px] sm:text-[9px] md:text-[10px] tracking-wider uppercase truncate font-medium ${
-                        isActive ? "text-white" : "text-zinc-400 group-hover:text-zinc-200"
-                      }`}
-                    >
-                      {scene.name}
-                    </h4>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        </div>
 
         {/* Footer Indicators */}
         <div
           data-collection-footer
-          className="relative z-20 max-w-7xl mx-auto w-full flex items-center justify-between text-zinc-500 text-[8px] md:text-[9px] tracking-[0.3em] uppercase pt-2"
+          className="relative z-20 max-w-7xl mx-auto w-full flex flex-col gap-1 items-center justify-between text-zinc-500 text-[8px] md:text-[9px] tracking-[0.3em] uppercase pt-2"
         >
-          {/* Left Indicator */}
-          <div className="flex items-center space-x-2">
-            <div className="w-6 h-[1px] bg-zinc-700" />
-            <span>SCROLL TO EXPLORE</span>
+          <div className="relative z-20 max-w-7xl   w-3/4 mx-auto pt-4 opacity-50 hover:opacity-90 transition-opacity duration-200">
+            <div className="grid grid-cols-5 gap-2 sm:gap-3 md:gap-4 items-end">
+              {COLLECTION_SCENES.map((scene, idx) => {
+                const isActive = idx === activeIndex;
+                return (
+                  <button
+                    key={scene.id}
+                    data-thumbnail-card
+                    onClick={() => goToScene(idx)}
+                    className={`group relative text-left rounded overflow-hidden transition-all duration-500 focus:outline-none ${
+                      isActive
+                        ? "ring-1 sm:ring-2 ring-brand-gold shadow-[0_0_25px_rgba(212,175,55,0.3)] scale-[1.03] md:scale-105 z-10"
+                        : "opacity-60 hover:opacity-100 border border-zinc-800/80 hover:border-zinc-700"
+                    }`}
+                  >
+                    {/* Thumbnail Image Container */}
+                    <div className="aspect-6/7 sm:aspect-[4/5] w-full overflow-hidden bg-zinc-950 relative">
+                      <img
+                        src={scene.thumbnail}
+                        alt={scene.name}
+                        className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-700"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-brand-black via-brand-black/40 to-transparent" />
+
+                      {/* Active Golden Highlight Bar */}
+                      {isActive && (
+                        <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-transparent via-brand-gold to-transparent" />
+                      )}
+                    </div>
+
+                    {/* Thumbnail Label Details */}
+                    <div className="p-1.5 sm:p-2 bg-zinc-950/90 backdrop-blur-sm space-y-0.5">
+                      <span
+                        className={`block text-[8px] sm:text-[9px] tracking-[0.2em] font-mono ${
+                          isActive
+                            ? "text-brand-gold font-bold"
+                            : "text-zinc-500"
+                        }`}
+                      >
+                        {scene.number}
+                      </span>
+                      <h4
+                        className={`text-[8px] sm:text-[9px] md:text-[10px] tracking-wider uppercase truncate font-medium ${
+                          isActive
+                            ? "text-white"
+                            : "text-zinc-400 group-hover:text-zinc-200"
+                        }`}
+                      >
+                        {scene.name}
+                      </h4>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          {/* Right Progress Bar */}
-          <div className="flex items-center space-x-3">
-            <div className="w-24 sm:w-32 h-[2px] bg-zinc-800 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-brand-gold transition-all duration-500 ease-out"
-                style={{
-                  width: `${((activeIndex + 1) / COLLECTION_SCENES.length) * 100}%`,
-                }}
-              />
+          <div
+            data-collection-footer
+            className="relative z-20 max-w-7xl mx-auto w-full flex items-center justify-between text-zinc-500 text-[8px] md:text-[9px] tracking-[0.3em] uppercase pt-2"
+          >
+            {/* Left Indicator */}
+            <div className="flex items-center space-x-2">
+              <div className="w-6 h-[1px] bg-zinc-700" />
+              <span>SCROLL TO EXPLORE</span>
             </div>
-            <span className="font-mono text-zinc-400">
-              {activeScene.number} / 05
-            </span>
+
+            {/* Right Progress Bar */}
+            <div className="flex items-center space-x-3">
+              <div className="w-24 sm:w-32 h-[2px] bg-zinc-800 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-brand-gold transition-all duration-500 ease-out"
+                  style={{
+                    width: `${((activeIndex + 1) / COLLECTION_SCENES.length) * 100}%`,
+                  }}
+                />
+              </div>
+              <span className="font-mono text-zinc-400">
+                {activeScene.number} / 05
+              </span>
+            </div>
           </div>
         </div>
       </section>

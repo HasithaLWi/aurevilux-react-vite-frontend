@@ -1,7 +1,8 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Star, ChevronLeft, ChevronRight, Check } from "lucide-react";
-import { testimonials } from "../../data/data";
+import { testimonials as defaultTestimonials } from "../../data/data";
 import { gsap, useGSAP, motionTokens } from "../../animations";
+import { api } from "../../services/api";
 
 const customQuotes: Record<string, string> = {
   "olivia": "Loved the exceptional craftsmanship, and extremely lightweight design. The luxurious fabrics, perfect fit, and timeless elegance exceeded all expectations.",
@@ -10,8 +11,31 @@ const customQuotes: Record<string, string> = {
 };
 
 const Testimonials: React.FC = () => {
+  const [items, setItems] = useState<any[]>(defaultTestimonials);
   const [activeIndex, setActiveIndex] = useState(1);
   const sectionRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    async function fetchFeatured() {
+      try {
+        const { data } = await api.get<{ message: string; data: any[] }>("/feedback/testimonials");
+        if (data.data && data.data.length > 0) {
+          const mapped = data.data.map((item, idx) => ({
+            id: item._id || `fb-${idx}`,
+            name: item.name,
+            role: item.role || "Haute Patron",
+            image: `/images/customers/${idx % 2 === 0 ? "sophia_elvah.jpg" : "ethan_wright.jpeg"}`,
+            quote: item.comment,
+            rating: item.rating,
+          }));
+          setItems([...mapped, ...defaultTestimonials].slice(0, 5));
+        }
+      } catch (e) {
+        // Fallback to default static testimonials
+      }
+    }
+    fetchFeatured();
+  }, []);
 
   useGSAP(
     () => {
@@ -51,11 +75,11 @@ const Testimonials: React.FC = () => {
   );
 
   const handleNext = () => {
-    setActiveIndex((prevIndex) => (prevIndex + 1) % testimonials.length);
+    setActiveIndex((prevIndex) => (prevIndex + 1) % items.length);
   };
 
   const handlePrev = () => {
-    setActiveIndex((prevIndex) => (prevIndex - 1 + testimonials.length) % testimonials.length);
+    setActiveIndex((prevIndex) => (prevIndex - 1 + items.length) % items.length);
   };
 
   return (
@@ -82,7 +106,7 @@ const Testimonials: React.FC = () => {
         <div className="w-full">
           {/* Desktop Layout */}
           <div className="hidden md:grid grid-cols-3 gap-6 lg:gap-8 items-stretch pt-6">
-            {testimonials.map((t, idx) => {
+            {items.slice(0, 3).map((t, idx) => {
               const isActive = idx === activeIndex;
               const quoteText = customQuotes[t.id] || t.quote;
 
@@ -138,31 +162,33 @@ const Testimonials: React.FC = () => {
 
           {/* Mobile Layout */}
           <div className="md:hidden flex flex-col space-y-6">
-            <div className="p-6 rounded-sm bg-brand-dark/50 border border-brand-burgundy/60 space-y-6">
-              <div className="flex items-center space-x-1">
-                {[...Array(testimonials[activeIndex].rating)].map((_, i) => (
-                  <Star key={i} className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
-                ))}
-              </div>
-              <p className="text-xs text-zinc-300 font-light leading-relaxed italic">
-                "{customQuotes[testimonials[activeIndex].id] || testimonials[activeIndex].quote}"
-              </p>
-              <div className="flex items-center space-x-4 pt-6 border-t border-zinc-900/80">
-                <img
-                  src={testimonials[activeIndex].avatar}
-                  alt={testimonials[activeIndex].name}
-                  className="w-10 h-10 rounded-full object-cover border border-zinc-800"
-                />
-                <div>
-                  <span className="text-xs font-semibold text-white uppercase block">
-                    {testimonials[activeIndex].name}
-                  </span>
-                  <span className="text-[10px] text-zinc-500 uppercase">
-                    {testimonials[activeIndex].role}
-                  </span>
+            {items[activeIndex % items.length] && (
+              <div className="p-6 rounded-sm bg-brand-dark/50 border border-brand-burgundy/60 space-y-6">
+                <div className="flex items-center space-x-1">
+                  {[...Array(items[activeIndex % items.length].rating || 5)].map((_, i) => (
+                    <Star key={i} className="w-3.5 h-3.5 fill-amber-500 text-amber-500" />
+                  ))}
+                </div>
+                <p className="text-xs text-zinc-300 font-light leading-relaxed italic">
+                  "{customQuotes[items[activeIndex % items.length].id] || items[activeIndex % items.length].quote}"
+                </p>
+                <div className="flex items-center space-x-4 pt-6 border-t border-zinc-900/80">
+                  <img
+                    src={items[activeIndex % items.length].avatar || items[activeIndex % items.length].image || "/images/customers/sophia_elvah.jpg"}
+                    alt={items[activeIndex % items.length].name}
+                    className="w-10 h-10 rounded-full object-cover border border-zinc-800"
+                  />
+                  <div>
+                    <span className="text-xs font-semibold text-white uppercase block">
+                      {items[activeIndex % items.length].name}
+                    </span>
+                    <span className="text-[10px] text-zinc-500 uppercase">
+                      {items[activeIndex % items.length].role}
+                    </span>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Slider Controls */}
             <div className="flex justify-center items-center space-x-4">
@@ -173,7 +199,7 @@ const Testimonials: React.FC = () => {
                 <ChevronLeft className="w-4 h-4" />
               </button>
               <span className="text-xs text-zinc-500 font-mono tracking-widest">
-                {activeIndex + 1} / {testimonials.length}
+                {(activeIndex % items.length) + 1} / {items.length}
               </span>
               <button
                 onClick={handleNext}
