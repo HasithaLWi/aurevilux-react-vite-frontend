@@ -15,6 +15,7 @@ import {
 import type { NewsletterSubscriber } from "../../types";
 import { AdminService } from "../../services/admin.service";
 import { LuxuryPagination } from "../common/LuxuryPagination";
+import { useLuxuryAlert } from "../../context/LuxuryAlertContext";
 
 interface NewsletterTabProps {
   subscribers: NewsletterSubscriber[];
@@ -25,6 +26,7 @@ export const NewsletterTab: React.FC<NewsletterTabProps> = ({
   subscribers,
   setSubscribers,
 }) => {
+  const { showAlert, confirm } = useLuxuryAlert();
   // Broadcast states
   const [subject, setSubject] = useState("");
   const [content, setContent] = useState("");
@@ -61,13 +63,14 @@ export const NewsletterTab: React.FC<NewsletterTabProps> = ({
     setFeedbackMsg("");
     try {
       const res = await AdminService.broadcastNewsletter(subject, content);
+      showAlert("success", `Haute Transmission successfully dispatched to ${res.recipientsCount || activeSubscribers} active patrons!`);
       setFeedbackMsg(
         `Haute Transmission successfully dispatched to ${res.recipientsCount || activeSubscribers} active patrons via SMTP with personalized unsubscribe links!`
       );
       setSubject("");
       setContent("");
     } catch (err: any) {
-      alert("Failed to broadcast newsletter: " + (err.response?.data?.message || err.message));
+      showAlert("error", "Failed to broadcast newsletter: " + (err.response?.data?.message || err.message));
     } finally {
       setIsSending(false);
     }
@@ -88,14 +91,14 @@ export const NewsletterTab: React.FC<NewsletterTabProps> = ({
           prev.map((s) => ((s._id || s.id) === id ? { ...s, isActive: updated.isActive } : s))
         );
       }
-      setActionFeedback(
+      showAlert(
+        "info",
         updated.isActive
           ? `Subscriber ${subscriber.email} reactivated successfully.`
           : `Subscriber ${subscriber.email} unsubscribed.`
       );
-      setTimeout(() => setActionFeedback(null), 4000);
     } catch (err: any) {
-      alert("Failed to update subscriber: " + (err.response?.data?.message || err.message));
+      showAlert("error", "Failed to update subscriber: " + (err.response?.data?.message || err.message));
     } finally {
       setActionLoadingId(null);
     }
@@ -106,9 +109,13 @@ export const NewsletterTab: React.FC<NewsletterTabProps> = ({
     const id = subscriber._id || subscriber.id;
     if (!id) return;
 
-    const confirmDelete = window.confirm(
-      `Are you sure you wish to permanently remove ${subscriber.email} from the atelier newsletter registry?`
-    );
+    const confirmDelete = await confirm({
+      title: "Remove Newsletter Subscriber",
+      message: `Are you sure you wish to permanently remove ${subscriber.email} from the atelier newsletter registry?`,
+      confirmText: "Remove Subscriber",
+      cancelText: "Keep Subscriber",
+      variant: "danger",
+    });
     if (!confirmDelete) return;
 
     setActionLoadingId(id);
@@ -117,10 +124,9 @@ export const NewsletterTab: React.FC<NewsletterTabProps> = ({
       if (setSubscribers) {
         setSubscribers((prev) => prev.filter((s) => (s._id || s.id) !== id));
       }
-      setActionFeedback(`Subscriber ${subscriber.email} permanently removed.`);
-      setTimeout(() => setActionFeedback(null), 4000);
+      showAlert("success", `Subscriber ${subscriber.email} permanently removed.`);
     } catch (err: any) {
-      alert("Failed to remove subscriber: " + (err.response?.data?.message || err.message));
+      showAlert("error", "Failed to remove subscriber: " + (err.response?.data?.message || err.message));
     } finally {
       setActionLoadingId(null);
     }
@@ -144,11 +150,10 @@ export const NewsletterTab: React.FC<NewsletterTabProps> = ({
           )
         );
       }
-      setActionFeedback(`Successfully unsubscribed ${manualEmail.trim()}.`);
+      showAlert("success", `Successfully unsubscribed ${manualEmail.trim()}.`);
       setManualEmail("");
-      setTimeout(() => setActionFeedback(null), 4000);
     } catch (err: any) {
-      alert("Failed to unsubscribe email: " + (err.response?.data?.message || err.message));
+      showAlert("error", "Failed to unsubscribe email: " + (err.response?.data?.message || err.message));
     } finally {
       setIsManualLoading(false);
     }

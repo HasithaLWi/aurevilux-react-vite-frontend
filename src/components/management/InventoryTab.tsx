@@ -3,6 +3,7 @@ import { Search, Filter, X } from "lucide-react";
 import type { Product } from "../../types";
 import { ProductService } from "../../services/product.service";
 import { LuxuryPagination } from "../common/LuxuryPagination";
+import { useLuxuryAlert } from "../../context/LuxuryAlertContext";
 
 interface InventoryTabProps {
   products: Product[];
@@ -13,6 +14,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
   products,
   setProducts,
 }) => {
+  const { showAlert } = useLuxuryAlert();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDept, setSelectedDept] = useState("all");
   const [selectedStockHealth, setSelectedStockHealth] = useState("all");
@@ -26,8 +28,14 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
 
     try {
       await ProductService.updateStock(slug, nextCount);
-    } catch (e) {
+      if (nextCount === 0) {
+        showAlert("warning", `Piece "${product.name}" is now marked OUT OF STOCK.`);
+      } else {
+        showAlert("success", `Stock for "${product.name}" updated to ${nextCount} units.`);
+      }
+    } catch (e: any) {
       console.warn("Stock update API note:", e);
+      showAlert("error", "Failed to update stock: " + (e.response?.data?.message || e.message));
     }
 
     setProducts((prev) =>

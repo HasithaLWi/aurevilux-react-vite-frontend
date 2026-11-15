@@ -188,11 +188,12 @@ export default function Login({ initialTab }: LoginProps) {
       });
 
       setAuthSuccess(
-        `Staff privileges confirmed as ${result.roles?.[0] || "STAFF"}! Accessing atelier backoffice...`,
+        result.message || "Registration successful. Your account is pending administrator approval.",
       );
+      // Do NOT redirect to admin — account needs approval first
       setTimeout(() => {
-        navigate("/admin");
-      }, 1200);
+        navigate("/login");
+      }, 3000);
     } catch (err: any) {
       const msg =
         err.response?.data?.message ||

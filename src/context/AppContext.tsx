@@ -38,6 +38,13 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const addToCart = (product: Product, quantity: number, color: string, size: string) => {
+    // Stock guard — prevent adding out-of-stock items
+    const stockCount = (product as any).stockCount ?? 999;
+    const inStock = (product as any).inStock !== false;
+    if (!inStock || stockCount <= 0) {
+      return; // Out of stock — caller should show alert
+    }
+
     setCart((prevCart) => {
       const existingItemIndex = prevCart.findIndex(
         (item) =>
@@ -48,11 +55,13 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
       if (existingItemIndex > -1) {
         const newCart = [...prevCart];
-        newCart[existingItemIndex].quantity += quantity;
+        const newQty = newCart[existingItemIndex].quantity + quantity;
+        // Cap at available stock
+        newCart[existingItemIndex].quantity = Math.min(newQty, stockCount);
         return newCart;
       }
 
-      return [...prevCart, { product, quantity, selectedColor: color, selectedSize: size }];
+      return [...prevCart, { product, quantity: Math.min(quantity, stockCount), selectedColor: color, selectedSize: size }];
     });
   };
 

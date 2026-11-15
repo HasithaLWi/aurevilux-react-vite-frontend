@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Plus,
   Search,
@@ -7,15 +7,13 @@ import {
   Edit,
   Eye,
   EyeOff,
-  Upload,
   X,
-  Loader2,
-  CheckCircle,
 } from "lucide-react";
 import type { Product } from "../../types";
 import { ProductService } from "../../services/product.service";
-import { UploadService } from "../../services/upload.service";
 import { LuxuryPagination } from "../common/LuxuryPagination";
+import { ProductForm } from "./ProductForm";
+import { useLuxuryAlert } from "../../context/LuxuryAlertContext";
 
 interface ProductsTabProps {
   products: Product[];
@@ -30,6 +28,11 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
   showModal,
   setShowModal,
 }) => {
+  const { showAlert, confirm } = useLuxuryAlert();
+  const [viewMode, setViewMode] = useState<"directory" | "form">("directory");
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+
+  // Filters & Pagination State
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDept, setSelectedDept] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
@@ -37,141 +40,46 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
   const [sortBy, setSortBy] = useState("newest");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
-  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
 
-  // Form State
-  const [formName, setFormName] = useState("");
-  const [formBrand, setFormBrand] = useState("Saint Laurent");
-  const [formDepartment, setFormDepartment] = useState<
-    "women" | "men" | "accessories" | "new-arrivals"
-  >("women");
-  const [formSubcategory, setFormSubcategory] = useState("Bags");
-  const [formPrice, setFormPrice] = useState(1450);
-  const [formStock, setFormStock] = useState(12);
-  const [formDescription, setFormDescription] = useState("");
-  const [formImages, setFormImages] = useState<string[]>([]);
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadMessage, setUploadMessage] = useState("");
-  const [formError, setFormError] = useState("");
+  // React to parent request to open creation form
+  useEffect(() => {
+    if (showModal) {
+      setEditingProduct(null);
+      setViewMode("form");
+    }
+  }, [showModal]);
 
-  // Open modal for Create
+  // Open Full-Page Form for Create
   const handleOpenCreate = () => {
     setEditingProduct(null);
-    setFormName("");
-    setFormBrand("Saint Laurent");
-    setFormDepartment("women");
-    setFormSubcategory("Bags");
-    setFormPrice(1450);
-    setFormStock(12);
-    setFormDescription("");
-    setFormImages([]);
-    setUploadMessage("");
-    setFormError("");
-    setShowModal(true);
+    setViewMode("form");
   };
 
-  // Open modal for Edit
+  // Open Full-Page Form for Edit
   const handleOpenEdit = (p: Product) => {
     setEditingProduct(p);
-    setFormName(p.name);
-    setFormBrand(p.brand);
-    setFormDepartment((p.department as any) || (p.category as any) || "women");
-    setFormSubcategory(p.subcategory || "Bags");
-    setFormPrice(p.price);
-    setFormStock(p.stockCount ?? 10);
-    setFormDescription(p.description || "");
-    setFormImages(p.images || []);
-    setUploadMessage("");
-    setFormError("");
-    setShowModal(true);
+    setViewMode("form");
   };
 
-  // Handle Multi-file Supabase upload (Max 5 images)
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (!e.target.files || e.target.files.length === 0) return;
-    const files = Array.from(e.target.files);
-
-    if (formImages.length + files.length > 5) {
-      alert("Aurevilux policy allows a maximum of 5 images per luxury piece.");
-      return;
-    }
-
-    setIsUploading(true);
-    setUploadMessage("Uploading to Supabase Storage...");
-    try {
-      const uploadedUrls: string[] = [];
-      for (const file of files) {
-        const res = await UploadService.uploadSingle(file, "products");
-        const url = res?.publicUrl || (res as any)?.url;
-        if (url) {
-          uploadedUrls.push(url);
-        }
-      }
-      setFormImages((prev) => [...prev, ...uploadedUrls]);
-      setUploadMessage(`Successfully stored ${uploadedUrls.length} piece image(s) to Supabase.`);
-    } catch (err: any) {
-      alert("Supabase upload failed: " + (err.message || err));
-    } finally {
-      setIsUploading(false);
-    }
-  };
-
-  const handleRemoveImage = (index: number) => {
-    setFormImages((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  // Save (Create or Update)
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formName.trim()) {
-      setFormError("Piece name is required.");
-      return;
-    }
-    if (formImages.length === 0) {
-      setFormError("Please upload at least 1 image to Supabase.");
-      return;
-    }
-
-    const slug = formName.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-    const payload: Partial<Product> = {
-      name: formName,
-      slug,
-      brand: formBrand,
-      category: formDepartment,
-      categoryLabel: `${formDepartment.toUpperCase()} / ${formSubcategory.toUpperCase()}`,
-      department: formDepartment,
-      subcategory: formSubcategory,
-      price: Number(formPrice),
-      stockCount: Number(formStock),
-      inStock: Number(formStock) > 0,
-      description: formDescription.trim() || `${formName} tailored for Aurevilux atelier fine living.`,
-      longDescription: formDescription.trim() || `${formName} tailored for Aurevilux atelier fine living.`,
-      images: formImages.slice(0, 5),
-      isActive: editingProduct ? editingProduct.isActive ?? true : true,
-    };
-
-    try {
-      if (editingProduct) {
-        const id = editingProduct._id || editingProduct.id || editingProduct.slug;
-        const updated = await ProductService.updateProduct(id, payload);
-        setProducts((prev) =>
-          prev.map((p) =>
-            (p._id === id || p.id === id || p.slug === id) ? { ...p, ...updated } : p
-          )
+  // Handle Save from Form
+  const handleSaveProduct = (savedProduct: Product) => {
+    const id = savedProduct._id || savedProduct.id || savedProduct.slug;
+    setProducts((prev) => {
+      const exists = prev.some((p) => p._id === id || p.id === id || p.slug === id);
+      if (exists) {
+        return prev.map((p) =>
+          p._id === id || p.id === id || p.slug === id ? { ...p, ...savedProduct } : p
         );
-      } else {
-        const created = await ProductService.createProduct(payload);
-        setProducts((prev) => [created, ...prev]);
       }
-      setShowModal(false);
-    } catch (err: any) {
-      console.error("Failed to save product:", err);
-      setFormError(
-        err.response?.data?.message ||
-        err.message ||
-        "Failed to persist luxury piece in database. Please verify connection."
-      );
-    }
+      return [savedProduct, ...prev];
+    });
+    setViewMode("directory");
+    setShowModal(false);
+  };
+
+  const handleCancelForm = () => {
+    setViewMode("directory");
+    setShowModal(false);
   };
 
   // Toggle Active State
@@ -180,33 +88,57 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
     const nextState = !(p.isActive ?? true);
     try {
       await ProductService.toggleProductActive(id);
-    } catch (e) {
+      showAlert(
+        "info",
+        `Piece "${p.name}" visibility changed to ${nextState ? "Live in Store" : "Atelier Archive"}.`
+      );
+    } catch (e: any) {
       console.warn("Toggle active API note:", e);
     }
     setProducts((prev) =>
       prev.map((item) =>
-        (item._id === id || item.id === id || item.slug === id)
+        item._id === id || item.id === id || item.slug === id
           ? { ...item, isActive: nextState }
           : item
       )
     );
   };
 
-  // Soft Delete
+  // Soft Delete with Luxury Confirmation
   const handleDelete = async (p: Product) => {
-    if (!confirm(`Are you sure you want to remove "${p.name}"? This will soft-delete the piece and purge its images from Supabase Storage.`)) {
-      return;
-    }
+    const confirmed = await confirm({
+      title: "Archive Luxury Piece",
+      message: `Are you certain you wish to archive "${p.name}"? This will soft-delete the piece from the active catalog and remove its assets from public display.`,
+      confirmText: "Archive Piece",
+      cancelText: "Keep Piece",
+      variant: "danger",
+    });
+
+    if (!confirmed) return;
+
     const id = p._id || p.id || p.slug;
     try {
       await ProductService.deleteProduct(id);
-    } catch (e) {
+      showAlert("success", `Piece "${p.name}" successfully archived.`);
+    } catch (e: any) {
       console.warn("Delete product API note:", e);
+      showAlert("error", "Failed to archive piece: " + (e.response?.data?.message || e.message));
     }
     setProducts((prev) =>
       prev.filter((item) => item._id !== id && item.id !== id && item.slug !== id)
     );
   };
+
+  // If in Form view mode, render full-page ProductForm
+  if (viewMode === "form") {
+    return (
+      <ProductForm
+        product={editingProduct}
+        onSave={handleSaveProduct}
+        onCancel={handleCancelForm}
+      />
+    );
+  }
 
   // Filter & Sort products
   const filteredProducts = products
@@ -225,7 +157,11 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
 
       // Department filter
       if (selectedDept !== "all") {
-        if (p.department !== selectedDept && p.category !== selectedDept) return false;
+        if (Array.isArray(p.department)) {
+          if (!p.department.map((d) => d.toLowerCase()).includes(selectedDept.toLowerCase())) return false;
+        } else if (p.department !== selectedDept && p.category !== selectedDept) {
+          return false;
+        }
       }
 
       // Visibility filter
@@ -277,14 +213,14 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
         </div>
         <button
           onClick={handleOpenCreate}
-          className="bg-brand-burgundy hover:bg-brand-burgundyHover text-white px-4 py-2 rounded text-xs font-bold tracking-widest uppercase flex items-center gap-2 transition-colors self-start md:self-auto"
+          className="bg-brand-burgundy hover:bg-brand-burgundyHover text-white px-4 py-2.5 rounded text-xs font-bold tracking-widest uppercase flex items-center gap-2 transition-colors self-start md:self-auto shadow-md shadow-brand-burgundy/20"
         >
           <Plus className="w-4 h-4" />
           <span>Add Luxury Piece</span>
         </button>
       </div>
 
-      {/* Filter / Search Bar (Horizontal Selectors, No Sidebars) */}
+      {/* Filter / Search Bar */}
       <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center">
         {/* Search */}
         <div className="relative flex-1">
@@ -329,7 +265,6 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
               <option value="women" className="bg-[#101014] text-white">Women</option>
               <option value="men" className="bg-[#101014] text-white">Men</option>
               <option value="accessories" className="bg-[#101014] text-white">Accessories</option>
-              <option value="new-arrivals" className="bg-[#101014] text-white">New Arrivals</option>
             </select>
           </div>
 
@@ -413,6 +348,9 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
               ) : (
                 paginatedProducts.map((p) => {
                   const isActive = p.isActive !== false;
+                  const deptDisplay = Array.isArray(p.department)
+                    ? p.department.join(", ")
+                    : p.department || p.category;
                   return (
                     <tr
                       key={p.id || p._id}
@@ -439,7 +377,7 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
                       </td>
                       <td className="py-3 px-4">
                         <span className="text-zinc-300 uppercase text-[10px] block font-medium">
-                          {p.department || p.category}
+                          {deptDisplay}
                         </span>
                         <span className="text-[9px] text-zinc-500 uppercase block">
                           {p.subcategory || "Couture Piece"}
@@ -494,7 +432,7 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
                           <button
                             onClick={() => handleDelete(p)}
                             className="p-1.5 bg-zinc-900 hover:bg-red-950/60 text-zinc-400 hover:text-red-400 rounded border border-zinc-800 hover:border-red-900 transition-colors"
-                            title="Soft Delete & Purge Supabase Images"
+                            title="Soft Delete & Archive Piece"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -520,220 +458,6 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
           />
         </div>
       </div>
-
-      {/* Add / Edit Luxury Piece Modal */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-[#101014] border border-zinc-800 rounded-lg max-w-2xl w-full p-6 space-y-5 my-8 text-left">
-            <div className="flex justify-between items-center border-b border-zinc-800 pb-3">
-              <div>
-                <span className="text-[9px] text-brand-gold uppercase tracking-[0.25em] font-bold">
-                  ATELIER WORKSHOP
-                </span>
-                <h3 className="font-serif text-lg text-white uppercase tracking-wider font-bold">
-                  {editingProduct ? "Edit Luxury Piece" : "Add New Luxury Piece"}
-                </h3>
-              </div>
-              <button
-                onClick={() => setShowModal(false)}
-                className="text-zinc-500 hover:text-white"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {formError && (
-              <div className="p-3 bg-red-950/40 border border-red-900 text-red-300 text-xs rounded">
-                {formError}
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block mb-1">
-                    Piece Title *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Velvet Luna Wing Gown"
-                    value={formName}
-                    onChange={(e) => setFormName(e.target.value)}
-                    className="w-full bg-brand-black border border-zinc-800 text-xs px-3 py-2 rounded text-white outline-none focus:border-brand-gold"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block mb-1">
-                    Maison / Brand *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Saint Laurent, Celine, Gucci"
-                    value={formBrand}
-                    onChange={(e) => setFormBrand(e.target.value)}
-                    className="w-full bg-brand-black border border-zinc-800 text-xs px-3 py-2 rounded text-white outline-none focus:border-brand-gold"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block mb-1">
-                    Department (Featured) *
-                  </label>
-                  <select
-                    value={formDepartment}
-                    onChange={(e) => setFormDepartment(e.target.value as any)}
-                    className="w-full bg-brand-black border border-zinc-800 text-xs px-3 py-2 rounded text-white outline-none uppercase"
-                  >
-                    <option value="women">Women</option>
-                    <option value="men">Men</option>
-                    <option value="accessories">Accessories</option>
-                    <option value="new-arrivals">New Arrivals</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block mb-1">
-                    Subcategory *
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Bags, Shoes, Coats, Watches, Jewelry"
-                    value={formSubcategory}
-                    onChange={(e) => setFormSubcategory(e.target.value)}
-                    className="w-full bg-brand-black border border-zinc-800 text-xs px-3 py-2 rounded text-white outline-none focus:border-brand-gold"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block mb-1">
-                    Price (USD $) *
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    required
-                    value={formPrice}
-                    onChange={(e) => setFormPrice(Number(e.target.value))}
-                    className="w-full bg-brand-black border border-zinc-800 text-xs px-3 py-2 rounded text-white outline-none focus:border-brand-gold font-mono"
-                  />
-                </div>
-                <div>
-                  <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block mb-1">
-                    Stock Units *
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    required
-                    value={formStock}
-                    onChange={(e) => setFormStock(Number(e.target.value))}
-                    className="w-full bg-brand-black border border-zinc-800 text-xs px-3 py-2 rounded text-white outline-none focus:border-brand-gold font-mono"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block mb-1">
-                  Atelier Description
-                </label>
-                <textarea
-                  rows={3}
-                  placeholder="Architectural lines tailored with Parisian craftsmanship..."
-                  value={formDescription}
-                  onChange={(e) => setFormDescription(e.target.value)}
-                  className="w-full bg-brand-black border border-zinc-800 text-xs p-3 rounded text-white outline-none focus:border-brand-gold"
-                />
-              </div>
-
-              {/* Supabase Multi-Image Upload (Max 5 images) */}
-              <div className="space-y-2 border-t border-zinc-800/80 pt-3">
-                <div className="flex justify-between items-center">
-                  <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block">
-                    Product Imagery (Supabase Storage — Max 5 Images)
-                  </label>
-                  <span className="text-[10px] text-zinc-500 font-mono">
-                    {formImages.length}/5 uploaded
-                  </span>
-                </div>
-
-                <div className="flex flex-wrap gap-3 items-center">
-                  {formImages.map((imgUrl, idx) => (
-                    <div
-                      key={idx}
-                      className="relative w-16 h-20 rounded bg-zinc-900 border border-zinc-800 overflow-hidden group"
-                    >
-                      <img
-                        src={imgUrl}
-                        alt="Product upload"
-                        className="w-full h-full object-cover"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveImage(idx)}
-                        className="absolute top-1 right-1 bg-black/80 hover:bg-red-600 text-white rounded p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
-                        title="Remove Image"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
-
-                  {formImages.length < 5 && (
-                    <label className="w-16 h-20 border border-dashed border-zinc-700 hover:border-brand-gold/60 rounded flex flex-col items-center justify-center cursor-pointer transition-colors text-zinc-500 hover:text-zinc-300">
-                      <Upload className="w-4 h-4 mb-1" />
-                      <span className="text-[9px] uppercase font-semibold">Upload</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        onChange={handleImageUpload}
-                        className="hidden"
-                        disabled={isUploading}
-                      />
-                    </label>
-                  )}
-                </div>
-
-                {isUploading && (
-                  <div className="flex items-center gap-2 text-xs text-brand-gold pt-1">
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    <span>Uploading image(s) to Supabase Storage bucket...</span>
-                  </div>
-                )}
-                {uploadMessage && !isUploading && (
-                  <div className="flex items-center gap-1.5 text-xs text-emerald-400 pt-1">
-                    <CheckCircle className="w-3.5 h-3.5" />
-                    <span>{uploadMessage}</span>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex justify-end gap-3 pt-3 border-t border-zinc-800">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2 border border-zinc-800 text-zinc-400 hover:text-white text-xs uppercase tracking-wider rounded"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={isUploading}
-                  className="px-5 py-2 bg-brand-burgundy hover:bg-brand-burgundyHover text-white text-xs font-bold uppercase tracking-widest rounded transition-colors disabled:opacity-50"
-                >
-                  {editingProduct ? "Save Changes" : "Create Piece"}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
-

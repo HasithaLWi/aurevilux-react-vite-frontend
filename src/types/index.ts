@@ -53,7 +53,8 @@ export interface LoginCredentials {
 // 2. PRODUCT CATALOG & BRANDS
 // ----------------------------------------------------------------------------
 
-export type ProductCategory = "women" | "men" | "accessories" | "new-arrivals";
+export type ProductDepartment = "MEN" | "WOMEN" | "ACCESSORIES";
+export type ProductCategory = string;
 
 export interface ProductColor {
   name: string;
@@ -83,7 +84,7 @@ export interface Product {
   reviewsCount: number;
   category: ProductCategory;
   categoryLabel: string;
-  department?: "men" | "women" | "accessories" | "new-arrivals" | "all";
+  department?: string[] | string;
   subcategory?: string;
   description: string;
   longDescription: string;
@@ -140,7 +141,7 @@ export interface Category {
   _id?: string;
   title: string;
   slug?: string;
-  department?: "men" | "women" | "accessories" | "new-arrivals" | "all";
+  department?: string[] | string;
   parentCategory?: string;
   subcategories?: string[];
   description: string;

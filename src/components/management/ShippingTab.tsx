@@ -3,6 +3,7 @@ import { Truck, X, Search, Filter } from "lucide-react";
 import type { Order } from "../../types";
 import { OrderService } from "../../services/order.service";
 import { LuxuryPagination } from "../common/LuxuryPagination";
+import { useLuxuryAlert } from "../../context/LuxuryAlertContext";
 
 interface ShippingTabProps {
   orders: Order[];
@@ -10,6 +11,7 @@ interface ShippingTabProps {
 }
 
 export const ShippingTab: React.FC<ShippingTabProps> = ({ orders, setOrders }) => {
+  const { showAlert } = useLuxuryAlert();
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [carrier, setCarrier] = useState("DHL Express Elite");
   const [trackingNumber, setTrackingNumber] = useState("");
@@ -26,7 +28,7 @@ export const ShippingTab: React.FC<ShippingTabProps> = ({ orders, setOrders }) =
     setSelectedOrder(order);
     setCarrier(order.carrier || "DHL Express Elite");
     setTrackingNumber(order.trackingNumber || "");
-    setEstimatedDelivery("3-5 Business Days");
+    setEstimatedDelivery(order.estimatedDelivery || "3-5 Business Days");
   };
 
   const handleSaveTracking = async (e: React.FormEvent) => {
@@ -36,8 +38,9 @@ export const ShippingTab: React.FC<ShippingTabProps> = ({ orders, setOrders }) =
 
     try {
       await OrderService.updateTracking(id, carrier, trackingNumber, estimatedDelivery);
+      showAlert("success", `Consignment dispatched via ${carrier}. Tracking: ${trackingNumber}`);
     } catch (e: any) {
-      alert("Failed to update tracking: " + (e.response?.data?.message || e.message));
+      showAlert("error", "Failed to update tracking: " + (e.response?.data?.message || e.message));
       return;
     }
 
@@ -49,6 +52,7 @@ export const ShippingTab: React.FC<ShippingTabProps> = ({ orders, setOrders }) =
               ...o,
               carrier,
               trackingNumber,
+              estimatedDelivery,
               status: "In Transit" as any,
             }
           : o;
@@ -316,11 +320,13 @@ export const ShippingTab: React.FC<ShippingTabProps> = ({ orders, setOrders }) =
                 <select
                   value={carrier}
                   onChange={(e) => setCarrier(e.target.value)}
-                  className="w-full bg-brand-black border border-zinc-800 text-xs px-3 py-2 rounded text-white outline-none"
+                  className="w-full bg-brand-black border border-zinc-800 text-xs px-3 py-2 rounded text-white outline-none cursor-pointer"
                 >
                   <option value="DHL Express Elite">DHL Express Elite Worldwide</option>
-                  <option value="FedEx International Priority">FedEx International Priority</option>
-                  <option value="Aurevilux Private Concierge">Aurevilux Private Concierge Courier</option>
+                  <option value="FedEx Private Luxe">FedEx Private Luxe Priority</option>
+                  <option value="Ferrari Logistics">Ferrari Group Haute Logistics (Valuables)</option>
+                  <option value="Malca-Amit">Malca-Amit Luxury Security Express</option>
+                  <option value="Aurevilux Private Concierge">Aurevilux Private White-Glove Concierge</option>
                 </select>
               </div>
 

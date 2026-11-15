@@ -1,7 +1,10 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ShieldAlert, AlertCircle } from "lucide-react";
-import { AdminSidebar, type AdminTabId } from "../components/management/AdminSidebar";
+import {
+  AdminSidebar,
+  type AdminTabId,
+} from "../components/management/AdminSidebar";
 import { DashboardTab } from "../components/management/DashboardTab";
 import { ProductsTab } from "../components/management/ProductsTab";
 import { CategoriesTab } from "../components/management/CategoriesTab";
@@ -9,7 +12,6 @@ import { BrandsTab } from "../components/management/BrandsTab";
 import { InventoryTab } from "../components/management/InventoryTab";
 import { ReviewsTab } from "../components/management/ReviewsTab";
 import { OrdersTab } from "../components/management/OrdersTab";
-import { ReturnsTab } from "../components/management/ReturnsTab";
 import { ShippingTab } from "../components/management/ShippingTab";
 import { CustomersTab } from "../components/management/CustomersTab";
 import { NewsletterTab } from "../components/management/NewsletterTab";
@@ -60,13 +62,19 @@ export default function Admin() {
   const [brandsList, setBrandsList] = useState<Brand[]>([]);
   const [brandApps, setBrandApps] = useState<BrandApp[]>([]);
   const [categoriesList, setCategoriesList] = useState<Category[]>([]);
-  const [productReviews, setProductReviews] = useState<ReviewModerationItem[]>([]);
+  const [productReviews, setProductReviews] = useState<ReviewModerationItem[]>(
+    [],
+  );
   const [websiteFeedback, setWebsiteFeedback] = useState<WebsiteFeedback[]>([]);
   const [customersList, setCustomersList] = useState<CustomerRecord[]>([]);
-  const [newsletterSubscribers, setNewsletterSubscribers] = useState<NewsletterSubscriber[]>([]);
+  const [newsletterSubscribers, setNewsletterSubscribers] = useState<
+    NewsletterSubscriber[]
+  >([]);
   const [staffList, setStaffList] = useState<any[]>([]);
   const [pendingInvites, setPendingInvites] = useState<any[]>([]);
-  const [analytics, setAnalytics] = useState<AnalyticsData | undefined>(undefined);
+  const [analytics, setAnalytics] = useState<AnalyticsData | undefined>(
+    undefined,
+  );
 
   // Product modal trigger
   const [showProductModal, setShowProductModal] = useState(false);
@@ -78,16 +86,11 @@ export default function Admin() {
     if (stored) {
       setCurrentUser(stored as any);
     } else {
-      // Demo session for preview
-      const demoAdmin = {
-        name: "Alexander Sterling",
-        email: "admin@aurevilux.com",
-        roles: ["SUPERADMIN"],
-        avatarUrl: "/images/customers/ethan_wright.jpeg",
-      };
-      setCurrentUser(demoAdmin);
+      // No stored user — ProtectedRoute should have caught this,
+      // but just in case, redirect to login
+      navigate("/login");
     }
-  }, []);
+  }, [navigate]);
 
   // Fetch Live Backoffice Data
   useEffect(() => {
@@ -153,72 +156,19 @@ export default function Admin() {
 
       try {
         const fb = await AdminService.getAllFeedback();
-        if (fb && fb.length > 0) {
-          setWebsiteFeedback(fb);
-        } else {
-          // Default testimonials preview
-          setWebsiteFeedback([
-            {
-              _id: "fb-1",
-              name: "Elena Rostova",
-              email: "elena@rostova.com",
-              role: "Private Collector, Milan",
-              rating: 5,
-              comment: "The bespoke packaging and courier delivery exceeded every haute couture standard.",
-              isFeatured: true,
-              status: "approved",
-              createdAt: new Date().toISOString(),
-            },
-            {
-              _id: "fb-2",
-              name: "Lord Marcus Sterling",
-              email: "marcus@sterling.co.uk",
-              role: "Savile Row Patron",
-              rating: 5,
-              comment: "Flawless horology acquisition. Aurevilux represents the future of luxury shopping.",
-              isFeatured: true,
-              status: "approved",
-              createdAt: new Date().toISOString(),
-            },
-          ]);
-        }
+        setWebsiteFeedback(fb || []);
       } catch (e) {
         console.warn("Feedback note:", e);
+        setWebsiteFeedback([]);
       }
 
       // 7. Customers
       try {
         const custs = await AdminService.getCustomers();
-        if (custs && custs.length > 0) {
-          setCustomersList(custs);
-        } else {
-          setCustomersList([
-            {
-              _id: "c-1",
-              name: "Sophia Elvah",
-              email: "sophia@aurevia.com",
-              username: "sophiaelvah",
-              authProvider: "local",
-              isActive: true,
-              createdAt: "2026-01-15T00:00:00.000Z",
-              ordersCount: 4,
-              totalSpend: 11400,
-            },
-            {
-              _id: "c-2",
-              name: "Antoine De Beaumarchais",
-              email: "antoine@paris.fr",
-              username: "antoineb",
-              authProvider: "google",
-              isActive: true,
-              createdAt: "2026-02-10T00:00:00.000Z",
-              ordersCount: 2,
-              totalSpend: 5900,
-            },
-          ]);
-        }
+        setCustomersList(custs || []);
       } catch (e) {
         console.warn("Customers note:", e);
+        setCustomersList([]);
       }
 
       // 8. Newsletter Subscribers
@@ -237,38 +187,13 @@ export default function Admin() {
           setStaffList(roster.staff);
           setPendingInvites(roster.invites || []);
         } else {
-          setStaffList([
-            {
-              _id: "st-1",
-              name: "Alexander Sterling",
-              email: "admin@aurevilux.com",
-              username: "superadmin",
-              roles: ["SUPERADMIN"],
-              isActive: true,
-              createdAt: "2026-01-01",
-            },
-            {
-              _id: "st-2",
-              name: "Claire Dupont",
-              email: "claire@aurevilux.com",
-              username: "claire_admin",
-              roles: ["ADMIN"],
-              isActive: true,
-              createdAt: "2026-01-20",
-            },
-            {
-              _id: "st-3",
-              name: "Henri Laurent",
-              email: "henri@aurevilux.com",
-              username: "henri_staff",
-              roles: ["STAFF"],
-              isActive: true,
-              createdAt: "2026-02-05",
-            },
-          ]);
+          setStaffList([]);
+          setPendingInvites([]);
         }
       } catch (e) {
         console.warn("Staff note:", e);
+        setStaffList([]);
+        setPendingInvites([]);
       }
     }
 
@@ -283,11 +208,34 @@ export default function Admin() {
   const primaryRole =
     currentUser?.roles?.[0] || currentUser?.role || "SUPERADMIN";
 
+  const isSuper = primaryRole === "SUPERADMIN" || primaryRole === "SUPER_ADMIN";
+  const isAdmin = primaryRole === "ADMIN" || isSuper;
+
+  const tabAccess: Record<string, boolean> = {
+    dashboard: true,
+    products: true,
+    categories: isAdmin,
+    brands: isAdmin,
+    inventory: true,
+    reviews: true,
+    orders: true,
+    shipping: true,
+    customers: true,
+    newsletter: isAdmin,
+    staff: isAdmin,
+    roles: isSuper,
+    settings: isSuper,
+  };
+
   const isStaffOrAdmin = currentUser?.roles?.some((r) =>
-    ["SUPERADMIN", "SUPER_ADMIN", "ADMIN", "STAFF"].includes(r)
+    ["SUPERADMIN", "SUPER_ADMIN", "ADMIN", "STAFF"].includes(r),
   );
 
-  if (currentUser && !isStaffOrAdmin && currentUser.roles?.includes("CUSTOMER")) {
+  if (
+    currentUser &&
+    !isStaffOrAdmin &&
+    currentUser.roles?.includes("CUSTOMER")
+  ) {
     return (
       <div className="min-h-screen w-full bg-brand-black flex items-center justify-center p-6 text-center">
         <div className="max-w-md w-full bg-[#0e0e12] border border-amber-900/60 rounded-xl p-8 space-y-6 shadow-2xl">
@@ -299,7 +247,9 @@ export default function Admin() {
               Access Restricted
             </h2>
             <p className="text-xs text-zinc-400 font-light leading-relaxed">
-              You are currently authenticated with Client clearance ({currentUser.email}). The Management Suite requires administrative personnel privileges (SUPERADMIN, ADMIN, or STAFF).
+              You are currently authenticated with Client clearance (
+              {currentUser.email}). The Management Suite requires administrative
+              personnel privileges (SUPERADMIN, ADMIN, or STAFF).
             </p>
           </div>
           <div className="pt-2 flex flex-col gap-3">
@@ -346,7 +296,8 @@ export default function Admin() {
                   Atelier Backend Offline (http://localhost:5000)
                 </span>
                 <p className="text-[11px] text-zinc-400 font-light">
-                  Changes made in management tabs will not sync to MongoDB until backend server is running.
+                  Changes made in management tabs will not sync to MongoDB until
+                  backend server is running.
                 </p>
               </div>
             </div>
@@ -358,7 +309,26 @@ export default function Admin() {
             </button>
           </div>
         )}
-        {activeTab === "dashboard" && (
+        {/* Tab Authorization Guard */}
+        {!tabAccess[activeTab] && (
+          <div className="p-8 bg-[#101014] border border-red-900/50 rounded-lg text-center space-y-4 max-w-lg mx-auto my-12">
+            <ShieldAlert className="w-10 h-10 text-red-400 mx-auto" />
+            <h3 className="font-serif text-lg text-white uppercase tracking-wider font-bold">
+              Clearance Restricted
+            </h3>
+            <p className="text-xs text-zinc-400 leading-relaxed font-light">
+              Your profile clearance (<span className="text-brand-gold font-mono font-semibold">{primaryRole}</span>) does not have authorization to view or manage the <span className="uppercase text-white font-semibold">{activeTab}</span> suite.
+            </p>
+            <button
+              onClick={() => setActiveTab("dashboard")}
+              className="px-4 py-2 bg-brand-burgundy hover:bg-brand-burgundyHover text-white text-xs uppercase tracking-wider font-bold rounded transition-colors"
+            >
+              Return to Dashboard
+            </button>
+          </div>
+        )}
+
+        {tabAccess[activeTab] && activeTab === "dashboard" && (
           <DashboardTab
             analytics={analytics}
             products={productsList}
@@ -371,7 +341,7 @@ export default function Admin() {
           />
         )}
 
-        {activeTab === "products" && (
+        {tabAccess[activeTab] && activeTab === "products" && (
           <ProductsTab
             products={productsList}
             setProducts={setProductsList}
@@ -380,14 +350,14 @@ export default function Admin() {
           />
         )}
 
-        {activeTab === "categories" && (
+        {tabAccess[activeTab] && activeTab === "categories" && (
           <CategoriesTab
             categories={categoriesList}
             setCategories={setCategoriesList}
           />
         )}
 
-        {activeTab === "brands" && (
+        {tabAccess[activeTab] && activeTab === "brands" && (
           <BrandsTab
             brands={brandsList}
             setBrands={setBrandsList}
@@ -396,14 +366,11 @@ export default function Admin() {
           />
         )}
 
-        {activeTab === "inventory" && (
-          <InventoryTab
-            products={productsList}
-            setProducts={setProductsList}
-          />
+        {tabAccess[activeTab] && activeTab === "inventory" && (
+          <InventoryTab products={productsList} setProducts={setProductsList} />
         )}
 
-        {activeTab === "reviews" && (
+        {tabAccess[activeTab] && activeTab === "reviews" && (
           <ReviewsTab
             productReviews={productReviews}
             setProductReviews={setProductReviews}
@@ -412,37 +379,29 @@ export default function Admin() {
           />
         )}
 
-        {activeTab === "orders" && (
-          <OrdersTab
-            orders={ordersList}
-            setOrders={setOrdersList}
-          />
+        {tabAccess[activeTab] && activeTab === "orders" && (
+          <OrdersTab orders={ordersList} setOrders={setOrdersList} />
         )}
 
-        {activeTab === "returns" && <ReturnsTab />}
-
-        {activeTab === "shipping" && (
-          <ShippingTab
-            orders={ordersList}
-            setOrders={setOrdersList}
-          />
+        {tabAccess[activeTab] && activeTab === "shipping" && (
+          <ShippingTab orders={ordersList} setOrders={setOrdersList} />
         )}
 
-        {activeTab === "customers" && (
+        {tabAccess[activeTab] && activeTab === "customers" && (
           <CustomersTab
             customers={customersList}
             setCustomers={setCustomersList}
           />
         )}
 
-        {activeTab === "newsletter" && (
+        {tabAccess[activeTab] && activeTab === "newsletter" && (
           <NewsletterTab
             subscribers={newsletterSubscribers}
             setSubscribers={setNewsletterSubscribers}
           />
         )}
 
-        {activeTab === "staff" && (
+        {tabAccess[activeTab] && activeTab === "staff" && (
           <StaffManagementTab
             currentUserRole={primaryRole}
             staffList={staffList}
@@ -452,9 +411,9 @@ export default function Admin() {
           />
         )}
 
-        {activeTab === "roles" && <RolesPermissionsTab />}
+        {tabAccess[activeTab] && activeTab === "roles" && <RolesPermissionsTab />}
 
-        {activeTab === "settings" && <SettingsTab />}
+        {tabAccess[activeTab] && activeTab === "settings" && <SettingsTab />}
       </main>
     </div>
   );

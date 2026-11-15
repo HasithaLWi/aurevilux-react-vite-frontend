@@ -3,6 +3,8 @@ import { Search, Filter, Eye, X } from "lucide-react";
 import type { Order } from "../../types";
 import { OrderService } from "../../services/order.service";
 import { LuxuryPagination } from "../common/LuxuryPagination";
+import { OrderDetailPanel } from "./OrderDetailPanel";
+import { useLuxuryAlert } from "../../context/LuxuryAlertContext";
 
 interface OrdersTabProps {
   orders: Order[];
@@ -10,6 +12,7 @@ interface OrdersTabProps {
 }
 
 export const OrdersTab: React.FC<OrdersTabProps> = ({ orders, setOrders }) => {
+  const { showAlert } = useLuxuryAlert();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [carrierFilter, setCarrierFilter] = useState("all");
@@ -21,8 +24,9 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({ orders, setOrders }) => {
   const handleStatusChange = async (orderId: string, nextStatus: string) => {
     try {
       await OrderService.updateOrderStatus(orderId, nextStatus);
+      showAlert("success", `Order status transitioned to ${nextStatus}.`);
     } catch (e: any) {
-      alert("Failed to update status: " + (e.response?.data?.message || e.message));
+      showAlert("error", "Failed to update status: " + (e.response?.data?.message || e.message));
       return;
     }
 
@@ -37,6 +41,28 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({ orders, setOrders }) => {
       setSelectedOrder((prev) => (prev ? { ...prev, status: nextStatus as any } : null));
     }
   };
+
+  const handleUpdateFromPanel = (updatedOrder: Order) => {
+    const id = updatedOrder.id || updatedOrder.orderNumber || (updatedOrder as any)._id;
+    setOrders((prev) =>
+      prev.map((o) => {
+        const oId = o.id || o.orderNumber || (o as any)._id;
+        return oId === id ? updatedOrder : o;
+      })
+    );
+    setSelectedOrder(updatedOrder);
+  };
+
+  // If inspecting an order, render full-page OrderDetailPanel
+  if (selectedOrder) {
+    return (
+      <OrderDetailPanel
+        order={selectedOrder}
+        onClose={() => setSelectedOrder(null)}
+        onUpdateOrder={handleUpdateFromPanel}
+      />
+    );
+  }
 
   const filteredOrders = orders
     .filter((o) => {
@@ -103,7 +129,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({ orders, setOrders }) => {
   };
 
   return (
-    <div className="space-y-6 w-full text-left">
+    <div className="space-y-6 w-full text-left animate-fade-in">
       {/* Header */}
       <div className="border-b border-zinc-900 pb-5 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -116,7 +142,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({ orders, setOrders }) => {
         </div>
       </div>
 
-      {/* Control Bar: Search & Selectors (No sidebars) */}
+      {/* Control Bar: Search & Selectors */}
       <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center">
         {/* Search */}
         <div className="relative flex-1">
@@ -222,7 +248,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({ orders, setOrders }) => {
                 <th className="py-3 px-4">Total</th>
                 <th className="py-3 px-4">Status Workflow</th>
                 <th className="py-3 px-4">Courier & Tracking</th>
-                <th className="py-3 px-4 text-right">Details</th>
+                <th className="py-3 px-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-900 font-light">
@@ -279,10 +305,10 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({ orders, setOrders }) => {
                       <td className="py-3 px-4 text-right">
                         <button
                           onClick={() => setSelectedOrder(ord)}
-                          className="px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 rounded text-[10px] uppercase font-semibold inline-flex items-center gap-1"
+                          className="px-3 py-1.5 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 hover:text-white rounded text-[10px] uppercase font-bold tracking-wider inline-flex items-center gap-1.5 transition-colors"
                         >
-                          <Eye className="w-3 h-3" />
-                          <span>Inspect</span>
+                          <Eye className="w-3.5 h-3.5 text-brand-gold" />
+                          <span>Manage Order</span>
                         </button>
                       </td>
                     </tr>
@@ -305,110 +331,6 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({ orders, setOrders }) => {
           />
         </div>
       </div>
-
-      {/* Inspect Order Modal */}
-      {selectedOrder && (
-        <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
-          <div className="bg-[#101014] border border-zinc-800 rounded-lg max-w-xl w-full p-6 space-y-5 text-left max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center border-b border-zinc-800 pb-3">
-              <div>
-                <span className="text-[9px] text-brand-gold uppercase tracking-[0.25em] font-bold">
-                  ORDER SPECIFICATION
-                </span>
-                <h3 className="font-serif text-lg text-white uppercase tracking-wider font-bold">
-                  {selectedOrder.orderNumber || selectedOrder.id}
-                </h3>
-              </div>
-              <button
-                onClick={() => setSelectedOrder(null)}
-                className="text-zinc-500 hover:text-white"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Patron & Destination */}
-            <div className="grid grid-cols-2 gap-4 text-xs bg-zinc-900/40 p-3 rounded border border-zinc-900">
-              <div>
-                <span className="text-[9px] text-zinc-500 uppercase tracking-widest font-semibold block">
-                  Client Profile
-                </span>
-                <p className="text-white font-medium mt-1">
-                  {selectedOrder.customer?.name || (selectedOrder as any).name || "Patron"}
-                </p>
-                <p className="text-zinc-400">
-                  {selectedOrder.customer?.email || (selectedOrder as any).email}
-                </p>
-                <p className="text-zinc-400">{selectedOrder.customer?.phone || ""}</p>
-              </div>
-              <div>
-                <span className="text-[9px] text-zinc-500 uppercase tracking-widest font-semibold block">
-                  Delivery Destination
-                </span>
-                <p className="text-white font-medium mt-1">
-                  {selectedOrder.shippingAddress?.street}
-                </p>
-                <p className="text-zinc-400">
-                  {selectedOrder.shippingAddress?.city}, {selectedOrder.shippingAddress?.state}{" "}
-                  {selectedOrder.shippingAddress?.postalCode}
-                </p>
-                <p className="text-zinc-400">{selectedOrder.shippingAddress?.country}</p>
-              </div>
-            </div>
-
-            {/* Ordered Pieces */}
-            <div className="space-y-2">
-              <span className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block">
-                Acquisitions ({(selectedOrder.items || []).length} items)
-              </span>
-              <div className="space-y-2 divide-y divide-zinc-900">
-                {(selectedOrder.items || []).map((item: any, idx: number) => (
-                  <div key={idx} className="pt-2 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-12 bg-zinc-900 rounded overflow-hidden border border-zinc-800 flex-shrink-0">
-                        {item.image && (
-                          <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-                        )}
-                      </div>
-                      <div>
-                        <p className="font-serif text-white uppercase text-xs font-semibold">
-                          {item.name}
-                        </p>
-                        <span className="text-[10px] text-zinc-400 font-mono">
-                          Qty: {item.quantity || 1} &bull; Size: {item.selectedSize || "Standard"}
-                        </span>
-                      </div>
-                    </div>
-                    <span className="font-serif text-white font-bold text-sm">
-                      ${((item.price || 0) * (item.quantity || 1)).toLocaleString()}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Financial Summary */}
-            <div className="pt-3 border-t border-zinc-800 flex justify-between items-center">
-              <div>
-                <span className="text-[10px] text-zinc-500 uppercase tracking-widest block">
-                  Total Settlement
-                </span>
-                <span className="font-serif text-xl text-brand-gold font-bold">
-                  ${Number(selectedOrder.total || 0).toLocaleString()}
-                </span>
-              </div>
-              <div className="text-right">
-                <span className="text-[10px] text-zinc-500 uppercase tracking-widest block">
-                  Current Status
-                </span>
-                <span className="text-xs font-bold uppercase text-white font-mono">
-                  {selectedOrder.status}
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

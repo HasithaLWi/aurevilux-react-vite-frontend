@@ -77,23 +77,15 @@ export const AuthService = {
     return data;
   },
 
-  // Register with Employee Invite Link
+  // Register with Employee Invite Link (no tokens returned — pending approval)
   registerWithInvite: async (payload: {
     token: string;
     name: string;
     username: string;
     password: string;
-  }): Promise<AuthResponse["data"]> => {
-    const { data } = await api.post<AuthResponse>("/auth/register-invite", payload);
-
-    if (data?.data?.access_token) {
-      localStorage.setItem("aurevilux_token", data.data.access_token);
-      localStorage.setItem("aurevilux_refresh_token", data.data.refresh_token);
-      localStorage.setItem("aurevilux_user", JSON.stringify(data.data));
-      sessionStorage.setItem("aurevilux_user", JSON.stringify(data.data));
-    }
-
-    return data.data;
+  }): Promise<{ message: string }> => {
+    const { data } = await api.post<{ message: string }>("/auth/register-invite", payload);
+    return data;
   },
 
   // Verify Invite Token

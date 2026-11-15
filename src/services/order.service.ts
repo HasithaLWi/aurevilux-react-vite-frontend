@@ -4,6 +4,7 @@ import type { Order } from "../types";
 export interface CreateOrderPayload {
   orderNumber?: string;
   items: Array<{
+    productId?: string;
     name: string;
     brand?: string;
     price: number;
@@ -31,6 +32,20 @@ export interface CreateOrderPayload {
 }
 
 export const OrderService = {
+  // Validate cart stock before checkout
+  validateCart: async (
+    items: Array<{ productId: string; quantity: number }>
+  ): Promise<{
+    valid: boolean;
+    unavailable: Array<{ productId: string; name: string; available: number; requested: number }>;
+  }> => {
+    const { data } = await api.post<{
+      valid: boolean;
+      unavailable: Array<{ productId: string; name: string; available: number; requested: number }>;
+    }>("/orders/validate-cart", { items });
+    return data;
+  },
+
   // Create a new luxury order
   createOrder: async (payload: CreateOrderPayload): Promise<Order> => {
     const { data } = await api.post<{ message: string; data: Order }>(

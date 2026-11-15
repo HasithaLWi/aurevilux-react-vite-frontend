@@ -1,9 +1,58 @@
 import React, { useRef } from "react";
-import { categories } from "../../data/data";
 import { gsap, useGSAP, motionTokens } from "../../animations";
 import { useNavigate } from "react-router-dom";
 
 const FeaturedCategories: React.FC = () => {
+  interface FeaturedCategory {
+    id: string;
+    _id?: string;
+    title: string;
+    slug?: string;
+    department?: string;
+    parentCategory?: string;
+    subcategories?: string[];
+    description: string;
+    image: string;
+    link: string;
+    buttonText: string;
+  }
+
+  const categories: FeaturedCategory[] = [
+    {
+      id: "women",
+      title: "WOMEN",
+      description: "The Modern Silhouette. Elegant designs for the new season.",
+      image: "/images/fashion_models/featured_categories_women.jpeg",
+      link: "/shop?category=women",
+      buttonText: "EXPLORE WOMEN",
+    },
+    {
+      id: "men",
+      title: "MEN",
+      description:
+        "Sartorial Precision. Refined style for the contemporary man.",
+      image: "/images/fashion_models/featured_categories_men.jpeg",
+      link: "/shop?category=men",
+      buttonText: "EXPLORE MEN",
+    },
+    {
+      id: "accessories",
+      title: "ACCESSORIES",
+      description:
+        "The Essential Accent. Statement pieces to elevate every look.",
+      image: "/images/products/featured_categories_accessories.jpeg",
+      link: "/shop?category=accessories",
+      buttonText: "SHOP ACCESSORIES",
+    },
+    {
+      id: "new-arrivals",
+      title: "NEW ARRIVALS",
+      description: "The Season's Best. Discover the latest trends and styles.",
+      image: "/images/fashion_models/featured_categories_new_arrivals.jpeg",
+      link: "/shop?category=new-arrivals",
+      buttonText: "SHOP NEW IN",
+    },
+  ];
   const sectionRef = useRef<HTMLElement>(null);
   const navigate = useNavigate();
 

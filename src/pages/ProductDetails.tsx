@@ -11,16 +11,20 @@ import {
   Truck,
   RefreshCw,
   Send,
+  LogIn,
 } from "lucide-react";
 import { products } from "../data/data";
 import type { Product } from "../data/data";
 import { useApp } from "../context/AppContext";
 import { ProductService } from "../services/product.service";
+import { AuthService } from "../services/auth.service";
+import { useLuxuryAlert } from "../context/LuxuryAlertContext";
 
 export default function ProductDetails() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { addToCart, toggleWishlist, isInWishlist } = useApp();
+  const { showAlert } = useLuxuryAlert();
 
   const [product, setProduct] = useState<Product | null>(null);
   const [activeImage, setActiveImage] = useState<string>("");
@@ -96,8 +100,9 @@ export default function ProductDetails() {
     if (!reviewerName.trim() || !reviewComment.trim()) return;
 
     setReviewSubmitting(true);
+    const pid = product.slug || product.id || (product as any)._id;
     try {
-      await ProductService.addReview(product.slug || product.id, {
+      await ProductService.addReview(pid, {
         name: reviewerName.trim(),
         rating: reviewRating,
         comment: reviewComment.trim(),
@@ -105,35 +110,41 @@ export default function ProductDetails() {
       setReviewSuccess("Thank you! Your atelier review has been recorded.");
       setReviewerName("");
       setReviewComment("");
-    } catch {
-      // Local addition fallback
-      const newReview = {
-        id: `rev-${Date.now()}`,
-        name: reviewerName.trim(),
-        rating: reviewRating,
-        date: "Just now",
-        comment: reviewComment.trim(),
-      };
-      setProduct({
-        ...product,
-        reviewsCount: (product.reviews?.length || 0) + 1,
-        reviews: [newReview, ...(product.reviews || [])],
-      });
-      setReviewSuccess("Review submitted successfully.");
-      setReviewerName("");
-      setReviewComment("");
+      showAlert("success", "Your review has been submitted successfully.", "Review Posted");
+      // Re-fetch product to update reviews list
+      try {
+        const refreshed = await ProductService.getProductBySlug(pid);
+        if (refreshed) setProduct(refreshed);
+      } catch {}
+    } catch (err: any) {
+      showAlert(
+        "error",
+        err.response?.data?.message || err.message || "Failed to submit review. Please try again."
+      );
     } finally {
       setReviewSubmitting(false);
     }
   };
 
   const isWishlisted = isInWishlist(product.id);
-  const isOutOfStock =
-    (product.stockCount ?? 10) === 0 || product.inStock === false;
+  const stockCount = (product as any).stockCount ?? 10;
+  const isOutOfStock = stockCount === 0 || product.inStock === false;
+  const isLoggedIn = AuthService.isAuthenticated();
 
   const handleAddToCart = () => {
     if (isOutOfStock) return;
+    // Require color selection if colors exist
+    if (product.colors && product.colors.length > 0 && !selectedColor) {
+      showAlert("warning", "Please select a color before adding to bag.");
+      return;
+    }
+    // Require size selection if sizes exist
+    if (product.sizes && product.sizes.length > 0 && !selectedSize) {
+      showAlert("warning", "Please select a size before adding to bag.");
+      return;
+    }
     addToCart(product, quantity, selectedColor, selectedSize);
+    showAlert("success", `${product.name} added to your shopping bag.`, "Added to Bag");
   };
 
   return (
@@ -148,17 +159,26 @@ export default function ProductDetails() {
           <Link to="/shop" className="hover:text-white">
             SHOP
           </Link>
-          <span>/</span>
-          <Link
-            to={`/shop?category=${product.department || product.category}`}
-            className="hover:text-white"
-          >
-            {product.department || product.category}
-          </Link>
-          {product.subcategory && (
+          {product.department && (
             <>
               <span>/</span>
-              <span className="text-zinc-400">{product.subcategory}</span>
+              <Link
+                to={`/shop?department=${Array.isArray(product.department) ? product.department[0] : product.department}`}
+                className="hover:text-white uppercase"
+              >
+                {Array.isArray(product.department) ? product.department[0] : product.department}
+              </Link>
+            </>
+          )}
+          {product.category && (
+            <>
+              <span>/</span>
+              <Link
+                to={`/shop?category=${typeof product.category === 'object' && product.category ? (product.category as any).slug : product.category}`}
+                className="hover:text-white uppercase"
+              >
+                {typeof product.category === 'object' && product.category ? (product.category as any).title : product.category}
+              </Link>
             </>
           )}
           <span>/</span>
@@ -318,12 +338,17 @@ export default function ProductDetails() {
                 </button>
                 <span className="px-5 text-sm font-semibold">{quantity}</span>
                 <button
-                  onClick={() => setQuantity(quantity + 1)}
+                  onClick={() => setQuantity(Math.min(quantity + 1, stockCount))}
                   className="px-3.5 py-2 text-zinc-400 hover:text-white"
                 >
                   <Plus className="w-3.5 h-3.5" />
                 </button>
               </div>
+              {stockCount <= 5 && stockCount > 0 && (
+                <p className="text-[10px] text-amber-500 tracking-wider mt-1">
+                  Only {stockCount} left in stock
+                </p>
+              )}
             </div>
           ) : (
             <div className="p-3 bg-red-950/20 border border-red-900/40 rounded text-red-400 text-xs font-mono uppercase tracking-wider">
@@ -483,18 +508,20 @@ export default function ProductDetails() {
                 </p>
               )}
 
-              {/* Add Review Form */}
+              {/* Add Review Form — auth required */}
               <div className="pt-6 border-t border-zinc-900 space-y-4">
-                <h4 className="font-serif text-sm uppercase tracking-wider text-white">
-                  Add Your Review
-                </h4>
-                {reviewSuccess && (
-                  <p className="text-xs text-emerald-500">{reviewSuccess}</p>
-                )}
-                <form
-                  onSubmit={handleReviewSubmit}
-                  className="space-y-4 max-w-lg"
-                >
+                {isLoggedIn ? (
+                  <>
+                    <h4 className="font-serif text-sm uppercase tracking-wider text-white">
+                      Add Your Review
+                    </h4>
+                    {reviewSuccess && (
+                      <p className="text-xs text-emerald-500">{reviewSuccess}</p>
+                    )}
+                    <form
+                      onSubmit={handleReviewSubmit}
+                      className="space-y-4 max-w-lg"
+                    >
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <input
                       type="text"
@@ -540,6 +567,26 @@ export default function ProductDetails() {
                     </span>
                   </button>
                 </form>
+                  </>
+                ) : (
+                  <div className="flex items-center gap-4 p-5 bg-zinc-900/30 border border-zinc-800 rounded-lg">
+                    <LogIn className="w-5 h-5 text-brand-gold flex-shrink-0" />
+                    <div>
+                      <p className="text-xs text-zinc-300 font-semibold tracking-wider uppercase">
+                        Sign In to Leave a Review
+                      </p>
+                      <p className="text-[10px] text-zinc-500 mt-0.5">
+                        Only authenticated patrons may share their experience with this piece.
+                      </p>
+                    </div>
+                    <Link
+                      to="/login"
+                      className="ml-auto px-4 py-2 bg-brand-burgundy hover:bg-brand-burgundyHover text-white text-[10px] font-bold tracking-widest uppercase rounded transition-colors flex-shrink-0"
+                    >
+                      Sign In
+                    </Link>
+                  </div>
+                )}
               </div>
             </div>
           )}

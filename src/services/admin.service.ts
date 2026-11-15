@@ -150,6 +150,30 @@ export const AdminService = {
     return data.data;
   },
 
+  // Staff Approval Queue
+  getPendingStaffApprovals: async (): Promise<any[]> => {
+    const { data } = await api.get<{ data: any[] }>("/admin/staff/pending-approvals");
+    return data.data;
+  },
+
+  approveStaff: async (id: string): Promise<any> => {
+    const { data } = await api.patch<{ message: string; data: any }>(
+      `/admin/staff/${id}/approve`
+    );
+    return data.data;
+  },
+
+  rejectStaff: async (id: string): Promise<any> => {
+    const { data } = await api.patch<{ message: string; data: any }>(
+      `/admin/staff/${id}/reject`
+    );
+    return data.data;
+  },
+
+  revokeInvite: async (id: string): Promise<void> => {
+    await api.delete(`/admin/invites/${id}`);
+  },
+
   // Customers Directory
   getCustomers: async (): Promise<CustomerRecord[]> => {
     const { data } = await api.get<{ message: string; data: CustomerRecord[] }>(

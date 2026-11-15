@@ -11,6 +11,8 @@ export interface ProductFilterParams {
   limit?: number;
   page?: number;
   inStock?: boolean;
+  isNewArrival?: boolean;
+  isBestSeller?: boolean;
   includeInactive?: boolean;
 }
 

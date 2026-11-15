@@ -6,9 +6,9 @@ export interface Product {
   price: number;
   rating: number;
   reviewsCount: number;
-  category: "women" | "men" | "accessories" | "new-arrivals";
+  category: string | any;
   categoryLabel: string;
-  department?: "women" | "men" | "accessories" | "new-arrivals" | "all";
+  department?: string[] | string;
   subcategory?: string;
   description: string;
   longDescription: string;

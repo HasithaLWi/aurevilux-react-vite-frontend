@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   UserPlus,
   Trash2,
@@ -11,9 +11,13 @@ import {
   Loader2,
   Search,
   Filter,
+  UserCheck,
+  UserX,
+  XCircle,
 } from "lucide-react";
 import { AdminService } from "../../services/admin.service";
 import { LuxuryPagination } from "../common/LuxuryPagination";
+import { useLuxuryAlert } from "../../context/LuxuryAlertContext";
 
 interface StaffMember {
   _id: string;
@@ -59,6 +63,20 @@ export const StaffManagementTab: React.FC<StaffManagementTabProps> = ({
   const [generatedInviteUrl, setGeneratedInviteUrl] = useState("");
   const [copied, setCopied] = useState(false);
 
+  // Pending Approval State
+  const [pendingApprovals, setPendingApprovals] = useState<any[]>([]);
+  const [activeSubTab, setActiveSubTab] = useState<"roster" | "approvals">("roster");
+  const { showAlert, confirm } = useLuxuryAlert();
+
+  // Fetch pending approvals on mount
+  useEffect(() => {
+    if (isAdmin) {
+      AdminService.getPendingStaffApprovals()
+        .then((data) => setPendingApprovals(data || []))
+        .catch((e) => console.warn("Pending approvals:", e));
+    }
+  }, []);
+
   // Search, Filter & Pagination states
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
@@ -83,7 +101,7 @@ export const StaffManagementTab: React.FC<StaffManagementTabProps> = ({
     if (!inviteEmail.trim()) return;
 
     if (inviteRole === "ADMIN" && !isSuperAdmin) {
-      alert("Authority Denied: Only SuperAdmin accounts can invite Atelier Administrators.");
+      showAlert("warning", "Only SuperAdmin accounts can invite Atelier Administrators.", "Authority Denied");
       return;
     }
 
@@ -106,7 +124,7 @@ export const StaffManagementTab: React.FC<StaffManagementTabProps> = ({
         ]);
       }
     } catch (err: any) {
-      alert("Failed to send staff invitation: " + (err.response?.data?.message || err.message));
+      showAlert("error", "Failed to send staff invitation: " + (err.response?.data?.message || err.message));
     } finally {
       setIsSending(false);
     }
@@ -124,11 +142,11 @@ export const StaffManagementTab: React.FC<StaffManagementTabProps> = ({
     const isTargetAdmin = member.roles.includes("ADMIN");
 
     if (isTargetSuper && !isSuperAdmin) {
-      alert("Authority Denied: SuperAdmin accounts cannot be suspended.");
+      showAlert("warning", "SuperAdmin accounts cannot be suspended.", "Authority Denied");
       return;
     }
     if (isTargetAdmin && !isSuperAdmin) {
-      alert("Authority Denied: Only SuperAdmin can suspend Administrators.");
+      showAlert("warning", "Only SuperAdmin can suspend Administrators.", "Authority Denied");
       return;
     }
 
@@ -148,17 +166,21 @@ export const StaffManagementTab: React.FC<StaffManagementTabProps> = ({
     const isTargetAdmin = member.roles.includes("ADMIN");
 
     if (isTargetSuper) {
-      alert("SuperAdmin accounts cannot be deleted.");
+      showAlert("warning", "SuperAdmin accounts cannot be deleted.", "Authority Denied");
       return;
     }
     if (isTargetAdmin && !isSuperAdmin) {
-      alert("Authority Denied: Only SuperAdmin can remove Administrators.");
+      showAlert("warning", "Only SuperAdmin can remove Administrators.", "Authority Denied");
       return;
     }
 
-    if (!confirm(`Are you sure you want to remove "${member.name}" from the atelier personnel roster?`)) {
-      return;
-    }
+    const confirmed = await confirm({
+      title: "Remove Personnel",
+      message: `Are you sure you want to remove "${member.name}" from the atelier personnel roster?`,
+      confirmText: "Remove",
+      variant: "danger",
+    });
+    if (!confirmed) return;
 
     try {
       await AdminService.deleteStaff(member._id);
@@ -231,7 +253,7 @@ export const StaffManagementTab: React.FC<StaffManagementTabProps> = ({
             PERSONNEL & ROLE-BASED ACCESS
           </span>
           <h1 className="font-serif text-2xl md:text-3xl uppercase text-white tracking-wider mt-1">
-            Atelier Staff Management ({filteredStaff.length})
+            Atelier Staff Management
           </h1>
         </div>
         {isAdmin && (
@@ -245,6 +267,115 @@ export const StaffManagementTab: React.FC<StaffManagementTabProps> = ({
         )}
       </div>
 
+      {/* Sub-tabs: Roster / Pending Approvals */}
+      {isAdmin && (
+        <div className="flex border-b border-zinc-900 gap-6">
+          <button
+            onClick={() => setActiveSubTab("roster")}
+            className={`text-xs font-semibold tracking-[0.2em] pb-3 transition-colors uppercase relative ${
+              activeSubTab === "roster" ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+            }`}
+          >
+            STAFF ROSTER ({filteredStaff.length})
+            {activeSubTab === "roster" && (
+              <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-brand-burgundy" />
+            )}
+          </button>
+          <button
+            onClick={() => setActiveSubTab("approvals")}
+            className={`text-xs font-semibold tracking-[0.2em] pb-3 transition-colors uppercase relative ${
+              activeSubTab === "approvals" ? "text-white" : "text-zinc-500 hover:text-zinc-300"
+            }`}
+          >
+            PENDING APPROVAL ({pendingApprovals.length})
+            {pendingApprovals.length > 0 && (
+              <span className="ml-1.5 w-2 h-2 bg-amber-500 rounded-full inline-block animate-pulse" />
+            )}
+            {activeSubTab === "approvals" && (
+              <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-brand-burgundy" />
+            )}
+          </button>
+        </div>
+      )}
+
+      {/* Pending Approvals Sub-tab Content */}
+      {activeSubTab === "approvals" && isAdmin && (
+        <div className="bg-[#101014] border border-zinc-900 rounded-lg overflow-hidden">
+          {pendingApprovals.length === 0 ? (
+            <div className="py-12 text-center text-zinc-500 text-xs tracking-wider">
+              No staff members awaiting approval.
+            </div>
+          ) : (
+            <div className="divide-y divide-zinc-900">
+              {pendingApprovals.map((user) => (
+                <div key={user._id} className="flex items-center justify-between px-5 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center font-serif text-brand-gold font-bold">
+                      {user.name?.charAt(0) || "?"}
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-white">{user.name}</p>
+                      <p className="text-[10px] text-zinc-500 font-mono">{user.email}</p>
+                      <span className="text-[9px] bg-amber-500/10 text-amber-400 border border-amber-500/30 px-1.5 py-0.5 rounded uppercase font-semibold">
+                        {user.roles?.[0] || "STAFF"} — Awaiting Approval
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={async () => {
+                        const ok = await confirm({
+                          title: "Approve Staff Member",
+                          message: `Grant ${user.name} (${user.roles?.[0] || "STAFF"}) access to the Aurevilux Management Suite?`,
+                          confirmText: "Approve",
+                          variant: "info",
+                        });
+                        if (!ok) return;
+                        try {
+                          await AdminService.approveStaff(user._id);
+                          setPendingApprovals((prev) => prev.filter((u) => u._id !== user._id));
+                          showAlert("success", `${user.name} has been approved and can now access the management suite.`, "Staff Approved");
+                        } catch (e: any) {
+                          showAlert("error", e?.response?.data?.message || "Approval failed");
+                        }
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-600/40 text-emerald-400 text-[10px] font-bold uppercase tracking-wider rounded transition-colors"
+                    >
+                      <UserCheck className="w-3.5 h-3.5" />
+                      Approve
+                    </button>
+                    <button
+                      onClick={async () => {
+                        const ok = await confirm({
+                          title: "Reject Staff Member",
+                          message: `Reject ${user.name}'s registration? Their account will be deactivated.`,
+                          confirmText: "Reject",
+                          variant: "danger",
+                        });
+                        if (!ok) return;
+                        try {
+                          await AdminService.rejectStaff(user._id);
+                          setPendingApprovals((prev) => prev.filter((u) => u._id !== user._id));
+                          showAlert("info", `${user.name}'s registration has been rejected.`, "Staff Rejected");
+                        } catch (e: any) {
+                          showAlert("error", e?.response?.data?.message || "Rejection failed");
+                        }
+                      }}
+                      className="flex items-center gap-1.5 px-3 py-2 bg-red-600/20 hover:bg-red-600/40 border border-red-600/40 text-red-400 text-[10px] font-bold uppercase tracking-wider rounded transition-colors"
+                    >
+                      <UserX className="w-3.5 h-3.5" />
+                      Reject
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {activeSubTab === "roster" && (
+      <>
       {/* Control Bar: Search & Selectors (No sidebars) */}
       <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center">
         {/* Search */}
@@ -477,14 +608,42 @@ export const StaffManagementTab: React.FC<StaffManagementTabProps> = ({
                     {new Date(inv.expiresAt).toLocaleDateString()}
                   </span>
                 </div>
-                <span className="text-[9px] bg-amber-500/10 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded uppercase font-semibold">
-                  Awaiting Acceptance
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[9px] bg-amber-500/10 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded uppercase font-semibold">
+                    {inv.used ? "Used" : "Awaiting Acceptance"}
+                  </span>
+                  {!inv.used && isAdmin && (
+                    <button
+                      onClick={async () => {
+                        const ok = await confirm({
+                          title: "Revoke Invitation",
+                          message: `Revoke the invitation sent to ${inv.email}? They will no longer be able to register with this link.`,
+                          confirmText: "Revoke",
+                          variant: "danger",
+                        });
+                        if (!ok) return;
+                        try {
+                          await AdminService.revokeInvite(inv._id);
+                          setPendingInvites((prev) => prev.filter((i) => i._id !== inv._id));
+                          showAlert("info", `Invitation to ${inv.email} has been revoked.`);
+                        } catch (e: any) {
+                          showAlert("error", e?.response?.data?.message || "Failed to revoke invitation");
+                        }
+                      }}
+                      className="p-1.5 bg-zinc-900 hover:bg-red-950/60 text-zinc-400 hover:text-red-400 rounded border border-zinc-800 hover:border-red-900 transition-colors"
+                      title="Revoke Invitation"
+                    >
+                      <XCircle className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
               </div>
             ))}
           </div>
         )}
       </div>
+      </>
+      )}
 
       {/* Invite Modal */}
       {showInviteModal && (

@@ -34,14 +34,20 @@ const Shop: React.FC = () => {
   );
 
   // Filters State
-  const [selectedDepartment, setSelectedDepartment] = useState<string>(
-    searchParams.get("department") || "",
-  );
   const [selectedCategory, setSelectedCategory] = useState<string>(
     searchParams.get("category") || "",
   );
+  const [selectedDepartment, setSelectedDepartment] = useState<string>(
+    searchParams.get("department") || "",
+  );
   const [selectedBrand, setSelectedBrand] = useState<string>(
     searchParams.get("brand") || "",
+  );
+  const [isNewArrival, setIsNewArrival] = useState<boolean>(
+    searchParams.get("isNewArrival") === "true",
+  );
+  const [isBestSeller, setIsBestSeller] = useState<boolean>(
+    searchParams.get("isBestSeller") === "true",
   );
   const [priceRange, setPriceRange] = useState<string>("all");
   const [selectedSize, setSelectedSize] = useState<string>("");
@@ -73,15 +79,7 @@ const Shop: React.FC = () => {
   const [quickAddNotice, setQuickAddNotice] = useState<string | null>(null);
 
   // Subcategories taxonomy list
-  const subcategoryList = [
-    "Bags",
-    "Shoes",
-    "Coats",
-    "Watches",
-    "Jewelry",
-    "Gowns",
-    "Scarves",
-  ];
+  const departmentsList = ["MEN", "WOMEN", "ACCESSORIES"];
 
   // Fetch Categories and Brands metadata once
   useEffect(() => {
@@ -115,16 +113,18 @@ const Shop: React.FC = () => {
         page: pageToFetch,
         limit: itemsPerPage,
         category:
-          selectedDepartment && selectedDepartment !== "all"
-            ? selectedDepartment
-            : undefined,
-        subcategory:
           selectedCategory && selectedCategory !== "all"
             ? selectedCategory
+            : undefined,
+        department:
+          selectedDepartment && selectedDepartment !== "all"
+            ? selectedDepartment
             : undefined,
         brand:
           selectedBrand && selectedBrand !== "all" ? selectedBrand : undefined,
         search: searchTerm.trim() ? searchTerm.trim() : undefined,
+        isNewArrival: isNewArrival ? true : undefined,
+        isBestSeller: isBestSeller ? true : undefined,
         sort: sortBy as any,
       });
 
@@ -147,9 +147,11 @@ const Shop: React.FC = () => {
   useEffect(() => {
     fetchProducts(currentPage);
   }, [
-    selectedDepartment,
     selectedCategory,
+    selectedDepartment,
     selectedBrand,
+    isNewArrival,
+    isBestSeller,
     sortBy,
     currentPage,
   ]);
@@ -201,14 +203,19 @@ const Shop: React.FC = () => {
   // Synchronize state when URL params change externally
   useEffect(() => {
     const department = searchParams.get("department");
-    const category = searchParams.get("subcategory");
+    const category =
+      searchParams.get("category") || searchParams.get("subcategory");
     const brand = searchParams.get("brand");
     const search = searchParams.get("search");
+    const isNewArrival = searchParams.get("isNewArrival");
+    const isBestSeller = searchParams.get("isBestSeller");
 
     if (department !== null) setSelectedDepartment(department);
     if (category !== null) setSelectedCategory(category);
     if (brand !== null) setSelectedBrand(brand);
     if (search !== null) setSearchTerm(search);
+    if (isNewArrival !== null) setIsNewArrival(isNewArrival === "true");
+    if (isBestSeller !== null) setIsBestSeller(isBestSeller === "true");
   }, [searchParams]);
 
   // Extract all unique sizes from loaded products for side filter
@@ -232,9 +239,11 @@ const Shop: React.FC = () => {
   });
 
   const clearAllFilters = () => {
-    setSelectedDepartment("");
     setSelectedCategory("");
+    setSelectedDepartment("");
     setSelectedBrand("");
+    setIsNewArrival(false);
+    setIsBestSeller(false);
     setPriceRange("all");
     setSelectedSize("");
     setSortBy("featured");
@@ -280,8 +289,8 @@ const Shop: React.FC = () => {
               A U R E V I L U X &bull; H A U T E &nbsp; C O U T U R E
             </span>
             <h1 className="font-serif text-3xl md:text-5xl text-white uppercase tracking-wider font-bold">
-              {selectedDepartment
-                ? selectedDepartment.replace("-", " ")
+              {selectedCategory
+                ? selectedCategory.replace("-", " ")
                 : "THE ATELIER COLLECTION"}
             </h1>
           </div>
@@ -343,6 +352,26 @@ const Shop: React.FC = () => {
               className="bg-[#16161b] text-zinc-200 border border-zinc-800 hover:border-brand-gold px-3 py-1.5 pr-7 rounded-lg text-xs outline-none cursor-pointer appearance-none tracking-wider transition-colors"
             >
               <option value="">ALL DEPARTMENTS</option>
+              {departmentsList.map((category) => (
+                <option key={category} value={category}>
+                  {category.toUpperCase()}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="w-3 h-3 text-zinc-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+          </div>
+
+          {/* 2. Category Selector */}
+          <div className="relative">
+            <select
+              value={selectedCategory}
+              onChange={(e) => {
+                setSelectedCategory(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="bg-[#16161b] text-zinc-200 border border-zinc-800 hover:border-brand-gold px-3 py-1.5 pr-7 rounded-lg text-xs outline-none cursor-pointer appearance-none tracking-wider transition-colors"
+            >
+              <option value="">ALL CATEGORIES</option>
               {(categoriesList.length > 0
                 ? categoriesList.map((c) => ({
                     id: c.slug || c.id || (c as any)._id,
@@ -354,34 +383,19 @@ const Shop: React.FC = () => {
                     ).toUpperCase(),
                   }))
                 : [
-                    { id: "women", name: "WOMEN" },
-                    { id: "men", name: "MEN" },
-                    { id: "accessories", name: "ACCESSORIES" },
-                    { id: "new-arrivals", name: "NEW ARRIVALS" },
+                    { id: "bags", name: "BAGS" },
+                    { id: "shoes", name: "SHOES" },
+                    { id: "coats", name: "COATS" },
+                    { id: "watches", name: "WATCHES" },
+                    { id: "jewelry", name: "JEWELRY" },
+                    { id: "gowns", name: "GOWNS" },
+                    { id: "scarves", name: "SCARVES" },
+                    { id: "jackets", name: "JACKETS" },
+                    { id: "blazers", name: "BLAZERS" },
                   ]
-              ).map((dept) => (
-                <option key={dept.id} value={dept.id}>
-                  {dept.name}
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="w-3 h-3 text-zinc-500 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-          </div>
-
-          {/* 2. Collection Piece / Subcategory Selector */}
-          <div className="relative">
-            <select
-              value={selectedCategory}
-              onChange={(e) => {
-                setSelectedCategory(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="bg-[#16161b] text-zinc-200 border border-zinc-800 hover:border-brand-gold px-3 py-1.5 pr-7 rounded-lg text-xs outline-none cursor-pointer appearance-none tracking-wider transition-colors"
-            >
-              <option value="">ALL PIECES</option>
-              {subcategoryList.map((category) => (
-                <option key={category} value={category}>
-                  {category.toUpperCase()}
+              ).map((cat) => (
+                <option key={cat.id} value={cat.id}>
+                  {cat.name}
                 </option>
               ))}
             </select>
@@ -481,27 +495,59 @@ const Shop: React.FC = () => {
       </div>
 
       {/* Active Filter Badges */}
-      {(selectedDepartment ||
-        selectedCategory ||
+      {(selectedCategory ||
+        selectedDepartment ||
         selectedBrand ||
+        isNewArrival ||
+        isBestSeller ||
         priceRange !== "all" ||
         selectedSize ||
         searchTerm) && (
         <div className="flex flex-wrap gap-2 items-center text-[10px] tracking-widest font-semibold pt-1">
           <span className="text-zinc-500 mr-1 uppercase">ACTIVE:</span>
+          {isNewArrival && (
+            <span className="bg-[#111116] border border-brand-gold/40 text-brand-gold px-2.5 py-1 rounded flex items-center gap-1.5 uppercase">
+              <span>Collection: NEW ARRIVALS</span>
+              <button
+                onClick={() => {
+                  setIsNewArrival(false);
+                  const p = new URLSearchParams(searchParams);
+                  p.delete("isNewArrival");
+                  setSearchParams(p);
+                }}
+              >
+                <X className="w-3 h-3 text-brand-gold/60 hover:text-white" />
+              </button>
+            </span>
+          )}
+          {isBestSeller && (
+            <span className="bg-[#111116] border border-brand-gold/40 text-brand-gold px-2.5 py-1 rounded flex items-center gap-1.5 uppercase">
+              <span>Collection: BEST SELLERS</span>
+              <button
+                onClick={() => {
+                  setIsBestSeller(false);
+                  const p = new URLSearchParams(searchParams);
+                  p.delete("isBestSeller");
+                  setSearchParams(p);
+                }}
+              >
+                <X className="w-3 h-3 text-brand-gold/60 hover:text-white" />
+              </button>
+            </span>
+          )}
           {selectedDepartment && (
-            <span className="bg-[#111116] border border-zinc-800 px-2.5 py-1 rounded flex items-center gap-1.5 uppercase text-zinc-300">
-              <span>Dept: {selectedDepartment}</span>
+            <span className="bg-[#111116] border border-brand-gold/40 text-brand-gold px-2.5 py-1 rounded flex items-center gap-1.5 uppercase">
+              <span>Department: {selectedDepartment}</span>
               <button onClick={() => setSelectedDepartment("")}>
-                <X className="w-3 h-3 text-zinc-500 hover:text-white" />
+                <X className="w-3 h-3 text-brand-gold/60 hover:text-white" />
               </button>
             </span>
           )}
           {selectedCategory && (
-            <span className="bg-[#111116] border border-brand-gold/40 text-brand-gold px-2.5 py-1 rounded flex items-center gap-1.5 uppercase">
-              <span>Piece: {selectedCategory}</span>
+            <span className="bg-[#111116] border border-zinc-800 px-2.5 py-1 rounded flex items-center gap-1.5 uppercase text-zinc-300">
+              <span>Category: {selectedCategory}</span>
               <button onClick={() => setSelectedCategory("")}>
-                <X className="w-3 h-3 text-brand-gold/60 hover:text-white" />
+                <X className="w-3 h-3 text-zinc-500 hover:text-white" />
               </button>
             </span>
           )}

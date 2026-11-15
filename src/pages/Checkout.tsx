@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ShieldCheck, Loader2, ChevronDown } from "lucide-react";
 import { useApp } from "../context/AppContext";
 import { OrderService } from "../services/order.service";
+import { useLuxuryAlert } from "../context/LuxuryAlertContext";
 
 type CheckoutStep = "shipping" | "payment" | "review";
 type PaymentMethod = "credit" | "paypal" | "applepay";
@@ -10,6 +11,7 @@ type PaymentMethod = "credit" | "paypal" | "applepay";
 export default function Checkout() {
   const navigate = useNavigate();
   const { cart, cartTotal, clearCart } = useApp();
+  const { showAlert, confirm } = useLuxuryAlert();
 
   const [isProcessing, setIsProcessing] = useState(false);
   const [activeStep, setActiveStep] = useState<CheckoutStep>("shipping");
@@ -104,12 +106,45 @@ export default function Checkout() {
     e.preventDefault();
     setIsProcessing(true);
 
-    const randomId = Math.floor(100000 + Math.random() * 900000);
-    const orderId = `AUR-${randomId}`;
+    // ── Pre-checkout stock validation ─────────────────────────────────────
+    try {
+      const cartItems = cart.map((item) => ({
+        productId: (item.product as any)._id || item.product.id,
+        quantity: item.quantity,
+      }));
+      const validation = await OrderService.validateCart(cartItems);
+      if (!validation.valid) {
+        const names = validation.unavailable.map(
+          (u) => `${u.name} (available: ${u.available})`
+        );
+        showAlert(
+          "error",
+          `The following items are out of stock or have insufficient quantity: ${names.join(", ")}. Please update your cart.`,
+          "Stock Unavailable"
+        );
+        setIsProcessing(false);
+        return;
+      }
+    } catch (err) {
+      console.warn("Cart validation failed, proceeding with order:", err);
+    }
+
+    // ── Confirm order placement ───────────────────────────────────────────
+    const confirmed = await confirm({
+      title: "Confirm Your Order",
+      message: `Place order for $${grandTotal.toLocaleString("en-US", { minimumFractionDigits: 2 })} (${itemCount} items)?`,
+      confirmText: "Place Order",
+      cancelText: "Review Cart",
+      variant: "info",
+    });
+    if (!confirmed) {
+      setIsProcessing(false);
+      return;
+    }
 
     const orderPayload = {
-      orderNumber: orderId,
       items: cart.map((item) => ({
+        productId: (item.product as any)._id || item.product.id,
         name: item.product.name,
         brand: item.product.brand,
         price: item.product.price,
@@ -123,115 +158,42 @@ export default function Checkout() {
       customer: {
         name: formData.fullName,
         email: formData.email,
-        phone: formData.phone || "+1 (555) 019-2834",
+        phone: formData.phone || "",
       },
       shippingAddress: {
         street: formData.address,
         city: formData.city,
-        state: "CA",
+        state: formData.city, // Use city as state fallback (removed hardcoded CA)
         postalCode: formData.postalCode,
         country: formData.country,
       },
-      carrier: "DHL Express Elite",
+      carrier: "DHL White Glove Concierge",
       paymentMethod,
     };
 
     try {
-      // Connect to real backend API: POST /api/v1/orders
-      await OrderService.createOrder(orderPayload);
-    } catch (apiErr) {
-      console.warn("Backend order creation sync note (persisting locally):", apiErr);
+      const order = await OrderService.createOrder(orderPayload);
+
+      // Use backend response order data as source of truth
+      const orderData = {
+        orderId: (order as any).orderNumber || (order as any)._id,
+        total: grandTotal,
+        itemsCount: itemCount,
+        name: formData.fullName,
+        address: `${formData.address}, ${formData.city}, ${formData.postalCode}, ${formData.country}`,
+      };
+
+      sessionStorage.setItem("aurevilux_last_order", JSON.stringify(orderData));
+
+      setIsProcessing(false);
+      clearCart();
+      showAlert("success", "Your order has been placed successfully!", "Order Confirmed");
+      navigate(`/checkout/success?orderId=${orderData.orderId}`);
+    } catch (apiErr: any) {
+      setIsProcessing(false);
+      const msg = apiErr?.response?.data?.message || "Failed to place order. Please try again.";
+      showAlert("error", msg, "Order Failed");
     }
-
-    const orderData = {
-      orderId,
-      total: grandTotal,
-      itemsCount: itemCount,
-      name: formData.fullName,
-      address: `${formData.address}, ${formData.city}, ${formData.postalCode}, ${formData.country}`,
-    };
-
-    sessionStorage.setItem("aurevilux_last_order", JSON.stringify(orderData));
-
-    // Also persist in local storage for order history view in account
-    const existingOrdersRaw = localStorage.getItem("aurevilux_orders");
-    let existingOrders: any[] = [];
-    if (existingOrdersRaw) {
-      try {
-        existingOrders = JSON.parse(existingOrdersRaw);
-      } catch (err) {
-        console.error("Error parsing existing orders", err);
-      }
-    }
-
-    const newOrder = {
-      id: orderId,
-      date: new Date().toLocaleDateString("en-US", {
-        month: "long",
-        day: "numeric",
-        year: "numeric",
-      }),
-      status: "Processing",
-      total: grandTotal,
-      itemsCount: itemCount,
-      name: formData.fullName,
-      email: formData.email,
-      phone: formData.phone || "+1 (555) 019-2834",
-      address: orderData.address,
-      carrier: "DHL Express",
-      trackingNumber: `AVX-${Math.floor(1000000 + Math.random() * 9000000)}-US`,
-      estimatedDelivery: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toLocaleDateString(
-        "en-US",
-        { month: "long", day: "numeric", year: "numeric" }
-      ),
-      items: orderPayload.items,
-      timeline: [
-        {
-          title: "Order Confirmed",
-          date:
-            new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" }) +
-            ", " +
-            new Date().toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" }),
-          completed: true,
-        },
-        {
-          title: "Processing at Atelier",
-          date:
-            new Date(Date.now() + 30 * 60 * 1000).toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-            }) +
-            ", " +
-            new Date(Date.now() + 30 * 60 * 1000).toLocaleTimeString("en-US", {
-              hour: "numeric",
-              minute: "2-digit",
-            }),
-          completed: true,
-        },
-        {
-          title: "Dispatched / In Transit",
-          date: "",
-          completed: false,
-        },
-        {
-          title: "Out for Delivery",
-          date: "",
-          completed: false,
-        },
-        {
-          title: "Delivered",
-          date: "",
-          completed: false,
-        },
-      ],
-    };
-
-    existingOrders.unshift(newOrder);
-    localStorage.setItem("aurevilux_orders", JSON.stringify(existingOrders));
-
-    setIsProcessing(false);
-    clearCart();
-    navigate(`/checkout/success?orderId=${orderId}`);
   };
 
   const steps: { key: CheckoutStep; label: string; number: number }[] = [

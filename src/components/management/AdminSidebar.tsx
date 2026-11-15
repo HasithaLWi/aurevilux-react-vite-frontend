@@ -8,7 +8,6 @@ import {
   Sliders,
   Star,
   ClipboardList,
-  RotateCcw,
   Truck,
   Users,
   Mail,
@@ -27,7 +26,6 @@ export type AdminTabId =
   | "inventory"
   | "reviews"
   | "orders"
-  | "returns"
   | "shipping"
   | "customers"
   | "newsletter"
@@ -56,6 +54,26 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
 }) => {
   const primaryRole =
     currentUser?.roles?.[0] || currentUser?.role || "ADMIN";
+
+  // Role-based access map: which tabs each role can see
+  const isSuper = primaryRole === "SUPERADMIN" || primaryRole === "SUPER_ADMIN";
+  const isAdmin = primaryRole === "ADMIN" || isSuper;
+
+  const tabAccess: Record<string, boolean> = {
+    dashboard: true,
+    products: true,
+    categories: isAdmin,
+    brands: isAdmin,
+    inventory: true,
+    reviews: true,
+    orders: true,
+    shipping: true,
+    customers: true,
+    newsletter: isAdmin,
+    staff: isAdmin,
+    roles: isSuper,
+    settings: isSuper,
+  };
 
   return (
     <aside className="w-full md:w-64 bg-[#0a0a0c] border-r border-zinc-900 flex flex-col justify-between flex-shrink-0 min-h-screen text-left">
@@ -109,7 +127,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                 { id: "brands", label: "BRANDS", icon: ShieldCheck },
                 { id: "inventory", label: "INVENTORY", icon: Sliders },
                 { id: "reviews", label: "REVIEWS", icon: Star },
-              ].map((item) => {
+              ].filter((item) => tabAccess[item.id] !== false).map((item) => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
                 return (
@@ -138,9 +156,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             <div className="space-y-0.5">
               {[
                 { id: "orders", label: "ORDERS", icon: ClipboardList },
-                { id: "returns", label: "RETURNS", icon: RotateCcw },
                 { id: "shipping", label: "SHIPPING", icon: Truck },
-              ].map((item) => {
+              ].filter((item) => tabAccess[item.id] !== false).map((item) => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
                 return (
@@ -180,53 +197,63 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           </div>
 
           {/* 5. MARKETING */}
-          <div className="space-y-1">
-            <span className="text-[9px] tracking-[0.25em] text-zinc-600 font-bold uppercase px-3 block">
-              MARKETING
-            </span>
-            <button
-              onClick={() => setActiveTab("newsletter")}
-              className={`w-full flex items-center space-x-3 px-3 py-2 rounded transition-all text-left uppercase text-[11px] tracking-wider ${
-                activeTab === "newsletter"
-                  ? "bg-brand-burgundy text-white font-bold"
-                  : "text-zinc-400 hover:text-white hover:bg-zinc-900/60"
-              }`}
-            >
-              <Mail className="w-3.5 h-3.5" />
-              <span>NEWSLETTER</span>
-            </button>
-          </div>
+          {tabAccess.newsletter && (
+            <div className="space-y-1">
+              <span className="text-[9px] tracking-[0.25em] text-zinc-600 font-bold uppercase px-3 block">
+                MARKETING
+              </span>
+              <button
+                onClick={() => setActiveTab("newsletter")}
+                className={`w-full flex items-center space-x-3 px-3 py-2 rounded transition-all text-left uppercase text-[11px] tracking-wider ${
+                  activeTab === "newsletter"
+                    ? "bg-brand-burgundy text-white font-bold"
+                    : "text-zinc-400 hover:text-white hover:bg-zinc-900/60"
+                }`}
+              >
+                <Mail className="w-3.5 h-3.5" />
+                <span>NEWSLETTER</span>
+              </button>
+            </div>
+          )}
 
           {/* 6. STAFF & SETTINGS */}
-          <div className="space-y-1">
-            <span className="text-[9px] tracking-[0.25em] text-zinc-600 font-bold uppercase px-3 block">
-              STAFF & SETTINGS
-            </span>
-            <div className="space-y-0.5">
-              {[
-                { id: "staff", label: "STAFF MANAGEMENT", icon: UserCog },
-                { id: "roles", label: "ROLES & PERMISSIONS", icon: KeyRound },
-                { id: "settings", label: "SETTINGS", icon: Settings },
-              ].map((item) => {
-                const Icon = item.icon;
-                const isActive = activeTab === item.id;
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveTab(item.id as AdminTabId)}
-                    className={`w-full flex items-center space-x-3 px-3 py-2 rounded transition-all text-left uppercase text-[11px] tracking-wider ${
-                      isActive
-                        ? "bg-brand-burgundy text-white font-bold"
-                        : "text-zinc-400 hover:text-white hover:bg-zinc-900/60"
-                    }`}
-                  >
-                    <Icon className="w-3.5 h-3.5" />
-                    <span>{item.label}</span>
-                  </button>
-                );
-              })}
+          {[
+            { id: "staff", label: "STAFF MANAGEMENT", icon: UserCog },
+            { id: "roles", label: "ROLES & PERMISSIONS", icon: KeyRound },
+            { id: "settings", label: "SETTINGS", icon: Settings },
+          ].filter((item) => tabAccess[item.id] !== false).length > 0 && (
+            <div className="space-y-1">
+              <span className="text-[9px] tracking-[0.25em] text-zinc-600 font-bold uppercase px-3 block">
+                STAFF & SETTINGS
+              </span>
+              <div className="space-y-0.5">
+                {[
+                  { id: "staff", label: "STAFF MANAGEMENT", icon: UserCog },
+                  { id: "roles", label: "ROLES & PERMISSIONS", icon: KeyRound },
+                  { id: "settings", label: "SETTINGS", icon: Settings },
+                ]
+                  .filter((item) => tabAccess[item.id] !== false)
+                  .map((item) => {
+                    const Icon = item.icon;
+                    const isActive = activeTab === item.id;
+                    return (
+                      <button
+                        key={item.id}
+                        onClick={() => setActiveTab(item.id as AdminTabId)}
+                        className={`w-full flex items-center space-x-3 px-3 py-2 rounded transition-all text-left uppercase text-[11px] tracking-wider ${
+                          isActive
+                            ? "bg-brand-burgundy text-white font-bold"
+                            : "text-zinc-400 hover:text-white hover:bg-zinc-900/60"
+                        }`}
+                      >
+                        <Icon className="w-3.5 h-3.5" />
+                        <span>{item.label}</span>
+                      </button>
+                    );
+                  })}
+              </div>
             </div>
-          </div>
+          )}
         </nav>
       </div>
 

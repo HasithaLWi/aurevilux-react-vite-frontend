@@ -1,13 +1,25 @@
 import React, { useState } from "react";
-import { Star, Trash2, Award, MessageSquare, Sparkles, Search, Filter, X } from "lucide-react";
+import {
+  Star,
+  Trash2,
+  Award,
+  MessageSquare,
+  Sparkles,
+  Search,
+  Filter,
+  X,
+} from "lucide-react";
 import type { ReviewModerationItem } from "../../services/admin.service";
 import type { WebsiteFeedback } from "../../types";
 import { AdminService } from "../../services/admin.service";
 import { LuxuryPagination } from "../common/LuxuryPagination";
+import { useLuxuryAlert } from "../../context/LuxuryAlertContext";
 
 interface ReviewsTabProps {
   productReviews: ReviewModerationItem[];
-  setProductReviews: React.Dispatch<React.SetStateAction<ReviewModerationItem[]>>;
+  setProductReviews: React.Dispatch<
+    React.SetStateAction<ReviewModerationItem[]>
+  >;
   websiteFeedback: WebsiteFeedback[];
   setWebsiteFeedback: React.Dispatch<React.SetStateAction<WebsiteFeedback[]>>;
 }
@@ -18,7 +30,10 @@ export const ReviewsTab: React.FC<ReviewsTabProps> = ({
   websiteFeedback,
   setWebsiteFeedback,
 }) => {
-  const [activeSubTab, setActiveSubTab] = useState<"products" | "website">("website");
+  const { showAlert, confirm } = useLuxuryAlert();
+  const [activeSubTab, setActiveSubTab] = useState<"products" | "website">(
+    "website",
+  );
 
   // Website Feedback Filters & Pagination
   const [searchWebsite, setSearchWebsite] = useState("");
@@ -35,12 +50,25 @@ export const ReviewsTab: React.FC<ReviewsTabProps> = ({
 
   // Delete product review
   const handleDeleteProductReview = async (reviewId: string) => {
-    if (!confirm("Are you sure you want to remove this piece review?")) return;
+    const ok = await confirm({
+      title: "Purge Product Review",
+      message:
+        "Are you certain you wish to permanently remove this piece review?",
+      confirmText: "Purge Review",
+      cancelText: "Keep Review",
+      variant: "danger",
+    });
+    if (!ok) return;
     try {
       await AdminService.deleteReview(reviewId);
       setProductReviews((prev) => prev.filter((r) => r.reviewId !== reviewId));
+      showAlert("success", "Piece review removed successfully.");
     } catch (e: any) {
-      alert("Failed to delete piece review: " + (e.response?.data?.message || e.message));
+      showAlert(
+        "error",
+        "Failed to delete piece review: " +
+          (e.response?.data?.message || e.message),
+      );
     }
   };
 
@@ -52,22 +80,47 @@ export const ReviewsTab: React.FC<ReviewsTabProps> = ({
         prev.map((f) =>
           f._id === id || f.id === id
             ? { ...f, isFeatured: updated.isFeatured, status: updated.status }
-            : f
-        )
+            : f,
+        ),
+      );
+      showAlert(
+        "success",
+        updated.isFeatured
+          ? "Feedback featured on boutique homepage as testimonial."
+          : "Feedback unfeatured from homepage.",
       );
     } catch (e: any) {
-      alert("Failed to update testimonial feature status: " + (e.response?.data?.message || e.message));
+      showAlert(
+        "error",
+        "Failed to update testimonial feature status: " +
+          (e.response?.data?.message || e.message),
+      );
     }
   };
 
   // Delete feedback
   const handleDeleteFeedback = async (id: string) => {
-    if (!confirm("Remove this boutique client feedback?")) return;
+    const ok = await confirm({
+      title: "Remove Patron Feedback",
+      message:
+        "Are you certain you wish to delete this client testimonial feedback?",
+      confirmText: "Delete Feedback",
+      cancelText: "Keep Feedback",
+      variant: "danger",
+    });
+    if (!ok) return;
     try {
       await AdminService.deleteFeedback(id);
-      setWebsiteFeedback((prev) => prev.filter((f) => f._id !== id && f.id !== id));
+      setWebsiteFeedback((prev) =>
+        prev.filter((f) => f._id !== id && f.id !== id),
+      );
+      showAlert("success", "Patron feedback removed.");
     } catch (e: any) {
-      alert("Failed to delete feedback: " + (e.response?.data?.message || e.message));
+      showAlert(
+        "error",
+        "Failed to delete feedback: " +
+          (e.response?.data?.message || e.message),
+      );
     }
   };
 
@@ -95,10 +148,11 @@ export const ReviewsTab: React.FC<ReviewsTabProps> = ({
     return true;
   });
 
-  const totalPagesWebsite = Math.ceil(filteredWebsite.length / itemsPerPageWebsite) || 1;
+  const totalPagesWebsite =
+    Math.ceil(filteredWebsite.length / itemsPerPageWebsite) || 1;
   const paginatedWebsite = filteredWebsite.slice(
     (currentPageWebsite - 1) * itemsPerPageWebsite,
-    currentPageWebsite * itemsPerPageWebsite
+    currentPageWebsite * itemsPerPageWebsite,
   );
 
   // Filtered Product Reviews
@@ -109,7 +163,8 @@ export const ReviewsTab: React.FC<ReviewsTabProps> = ({
       const matchBrand = (r.productBrand || "").toLowerCase().includes(q);
       const matchPatron = (r.name || "").toLowerCase().includes(q);
       const matchComment = (r.comment || "").toLowerCase().includes(q);
-      if (!matchPiece && !matchBrand && !matchPatron && !matchComment) return false;
+      if (!matchPiece && !matchBrand && !matchPatron && !matchComment)
+        return false;
     }
 
     if (ratingProduct !== "all") {
@@ -123,10 +178,11 @@ export const ReviewsTab: React.FC<ReviewsTabProps> = ({
     return true;
   });
 
-  const totalPagesProducts = Math.ceil(filteredProducts.length / itemsPerPageProduct) || 1;
+  const totalPagesProducts =
+    Math.ceil(filteredProducts.length / itemsPerPageProduct) || 1;
   const paginatedProducts = filteredProducts.slice(
     (currentPageProduct - 1) * itemsPerPageProduct,
-    currentPageProduct * itemsPerPageProduct
+    currentPageProduct * itemsPerPageProduct,
   );
 
   return (
@@ -209,9 +265,15 @@ export const ReviewsTab: React.FC<ReviewsTabProps> = ({
                   }}
                   className="bg-transparent text-xs text-zinc-300 outline-none uppercase tracking-wider py-1.5 cursor-pointer"
                 >
-                  <option value="all" className="bg-[#101014] text-white">All Feedback</option>
-                  <option value="featured" className="bg-[#101014] text-white">Featured Only</option>
-                  <option value="standard" className="bg-[#101014] text-white">Standard Only</option>
+                  <option value="all" className="bg-[#101014] text-white">
+                    All Feedback
+                  </option>
+                  <option value="featured" className="bg-[#101014] text-white">
+                    Featured Only
+                  </option>
+                  <option value="standard" className="bg-[#101014] text-white">
+                    Standard Only
+                  </option>
                 </select>
               </div>
 
@@ -224,14 +286,26 @@ export const ReviewsTab: React.FC<ReviewsTabProps> = ({
                 }}
                 className="bg-[#101014] border border-zinc-900 text-xs px-3 py-2.5 rounded text-zinc-300 outline-none uppercase tracking-wider cursor-pointer"
               >
-                <option value="all" className="bg-[#101014] text-white">All Ratings</option>
-                <option value="5" className="bg-[#101014] text-white">5 Stars</option>
-                <option value="4" className="bg-[#101014] text-white">4 Stars</option>
-                <option value="3" className="bg-[#101014] text-white">3 Stars</option>
-                <option value="1-2" className="bg-[#101014] text-white">1-2 Stars</option>
+                <option value="all" className="bg-[#101014] text-white">
+                  All Ratings
+                </option>
+                <option value="5" className="bg-[#101014] text-white">
+                  5 Stars
+                </option>
+                <option value="4" className="bg-[#101014] text-white">
+                  4 Stars
+                </option>
+                <option value="3" className="bg-[#101014] text-white">
+                  3 Stars
+                </option>
+                <option value="1-2" className="bg-[#101014] text-white">
+                  1-2 Stars
+                </option>
               </select>
 
-              {(searchWebsite || statusWebsite !== "all" || ratingWebsite !== "all") && (
+              {(searchWebsite ||
+                statusWebsite !== "all" ||
+                ratingWebsite !== "all") && (
                 <button
                   onClick={() => {
                     setSearchWebsite("");
@@ -287,7 +361,9 @@ export const ReviewsTab: React.FC<ReviewsTabProps> = ({
 
                   <div className="pt-3 border-t border-zinc-900 flex items-center justify-between">
                     <button
-                      onClick={() => handleToggleFeatureFeedback(fb._id || fb.id || "")}
+                      onClick={() =>
+                        handleToggleFeatureFeedback(fb._id || fb.id || "")
+                      }
                       className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-[10px] font-bold uppercase tracking-wider transition-all ${
                         fb.isFeatured
                           ? "bg-brand-gold text-black shadow-sm"
@@ -295,10 +371,16 @@ export const ReviewsTab: React.FC<ReviewsTabProps> = ({
                       }`}
                     >
                       <Award className="w-3.5 h-3.5" />
-                      <span>{fb.isFeatured ? "Featured on Homepage" : "Feature as Testimonial"}</span>
+                      <span>
+                        {fb.isFeatured
+                          ? "Featured on Homepage"
+                          : "Feature as Testimonial"}
+                      </span>
                     </button>
                     <button
-                      onClick={() => handleDeleteFeedback(fb._id || fb.id || "")}
+                      onClick={() =>
+                        handleDeleteFeedback(fb._id || fb.id || "")
+                      }
                       className="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-zinc-900 rounded"
                       title="Delete Feedback"
                     >
@@ -363,11 +445,21 @@ export const ReviewsTab: React.FC<ReviewsTabProps> = ({
                   }}
                   className="bg-transparent text-xs text-zinc-300 outline-none uppercase tracking-wider py-1.5 cursor-pointer"
                 >
-                  <option value="all" className="bg-[#101014] text-white">All Ratings</option>
-                  <option value="5" className="bg-[#101014] text-white">5 Stars</option>
-                  <option value="4" className="bg-[#101014] text-white">4 Stars</option>
-                  <option value="3" className="bg-[#101014] text-white">3 Stars</option>
-                  <option value="1-2" className="bg-[#101014] text-white">1-2 Stars</option>
+                  <option value="all" className="bg-[#101014] text-white">
+                    All Ratings
+                  </option>
+                  <option value="5" className="bg-[#101014] text-white">
+                    5 Stars
+                  </option>
+                  <option value="4" className="bg-[#101014] text-white">
+                    4 Stars
+                  </option>
+                  <option value="3" className="bg-[#101014] text-white">
+                    3 Stars
+                  </option>
+                  <option value="1-2" className="bg-[#101014] text-white">
+                    1-2 Stars
+                  </option>
                 </select>
               </div>
 
@@ -401,25 +493,38 @@ export const ReviewsTab: React.FC<ReviewsTabProps> = ({
                 <tbody className="divide-y divide-zinc-900 font-light">
                   {filteredProducts.length === 0 ? (
                     <tr>
-                      <td colSpan={5} className="py-8 text-center text-zinc-500">
+                      <td
+                        colSpan={5}
+                        className="py-8 text-center text-zinc-500"
+                      >
                         No piece reviews match your search or filter.
                       </td>
                     </tr>
                   ) : (
                     paginatedProducts.map((r) => (
-                      <tr key={r.reviewId} className="hover:bg-zinc-900/30 transition-colors">
+                      <tr
+                        key={r.reviewId}
+                        className="hover:bg-zinc-900/30 transition-colors"
+                      >
                         <td className="py-3 px-4 font-serif text-white uppercase font-medium">
                           {r.productName}
                           <span className="text-[9px] text-brand-gold uppercase block font-sans">
                             {r.productBrand}
                           </span>
                         </td>
-                        <td className="py-3 px-4 text-zinc-300 font-medium">{r.name}</td>
+                        <td className="py-3 px-4 text-zinc-300 font-medium">
+                          {r.name}
+                        </td>
                         <td className="py-3 px-4">
                           <div className="flex items-center text-brand-gold">
-                            {Array.from({ length: r.rating || 5 }).map((_, i) => (
-                              <Star key={i} className="w-3 h-3 fill-current" />
-                            ))}
+                            {Array.from({ length: r.rating || 5 }).map(
+                              (_, i) => (
+                                <Star
+                                  key={i}
+                                  className="w-3 h-3 fill-current"
+                                />
+                              ),
+                            )}
                           </div>
                         </td>
                         <td className="py-3 px-4 text-zinc-400 max-w-sm truncate italic">
@@ -427,7 +532,9 @@ export const ReviewsTab: React.FC<ReviewsTabProps> = ({
                         </td>
                         <td className="py-3 px-4 text-right">
                           <button
-                            onClick={() => handleDeleteProductReview(r.reviewId)}
+                            onClick={() =>
+                              handleDeleteProductReview(r.reviewId)
+                            }
                             className="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-zinc-900 rounded border border-zinc-800"
                             title="Purge Review"
                           >

@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { ShoppingBag, Trash2, Plus, Minus, ShieldCheck, Ticket } from "lucide-react";
+import { ShoppingBag, Trash2, Plus, Minus, ShieldCheck, Ticket, AlertTriangle } from "lucide-react";
 import { useApp } from "../context/AppContext";
+import { OrderService } from "../services/order.service";
 
 export default function Cart() {
   const { cart, removeFromCart, updateCartQuantity, cartTotal, clearCart } = useApp();
@@ -9,6 +10,56 @@ export default function Cart() {
   const [appliedDiscount, setAppliedDiscount] = useState(0); // in percent
   const [promoError, setPromoError] = useState("");
   const [promoSuccess, setPromoSuccess] = useState("");
+
+  // Live Stock Availability State
+  const [stockStatus, setStockStatus] = useState<Record<string, { available: number; requested: number }>>({});
+  const [hasStockIssue, setHasStockIssue] = useState(false);
+
+  // Validate cart against backend database on load & when cart changes
+  useEffect(() => {
+    async function checkAvailability() {
+      if (cart.length === 0) {
+        setStockStatus({});
+        setHasStockIssue(false);
+        return;
+      }
+
+      const itemsPayload = cart.map((item) => ({
+        productId: (item.product as any)._id || item.product.id || item.product.slug,
+        quantity: item.quantity,
+      }));
+
+      try {
+        const res = await OrderService.validateCart(itemsPayload);
+        if (!res.valid && res.unavailable) {
+          const map: Record<string, { available: number; requested: number }> = {};
+          for (const unav of res.unavailable) {
+            map[unav.productId] = { available: unav.available, requested: unav.requested };
+          }
+          setStockStatus(map);
+          setHasStockIssue(true);
+        } else {
+          setStockStatus({});
+          setHasStockIssue(false);
+        }
+      } catch (e) {
+        console.warn("Cart stock verification error:", e);
+      }
+    }
+
+    checkAvailability();
+  }, [cart]);
+
+  // Remove all completely sold-out pieces
+  const handleRemoveSoldOut = () => {
+    cart.forEach((item) => {
+      const pId = (item.product as any)._id || item.product.id || item.product.slug;
+      const status = stockStatus[pId];
+      if (status && status.available === 0) {
+        removeFromCart(item.product.id, item.selectedColor, item.selectedSize);
+      }
+    });
+  };
 
   const handleApplyPromo = (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,6 +94,29 @@ export default function Cart() {
         </h1>
       </div>
 
+      {/* Live Stock Notification Banner */}
+      {hasStockIssue && cart.length > 0 && (
+        <div className="p-4 bg-[#1e1315] border border-amber-900/60 rounded-lg flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-amber-200 text-xs shadow-lg">
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0" />
+            <div>
+              <span className="font-bold uppercase tracking-wider block text-amber-300">
+                Atelier Availability Notice
+              </span>
+              <p className="text-[11px] text-zinc-400 font-light">
+                Certain pieces in your shopping bag have limited atelier availability or are currently sold out.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleRemoveSoldOut}
+            className="px-3 py-1.5 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 text-[10px] uppercase font-bold tracking-wider rounded transition-colors whitespace-nowrap self-start sm:self-auto"
+          >
+            Remove Sold Out Pieces
+          </button>
+        </div>
+      )}
+
       {cart.length === 0 ? (
         <div className="py-24 text-center border border-dashed border-zinc-800 rounded space-y-6">
           <ShoppingBag className="w-12 h-12 text-zinc-700 stroke-[1.2] mx-auto" />
@@ -67,7 +141,10 @@ export default function Cart() {
               <div className="col-span-2 text-right">TOTAL</div>
             </div>
 
-            {cart.map((item) => (
+            {cart.map((item) => {
+              const pId = (item.product as any)._id || item.product.id || item.product.slug;
+              const itemStock = stockStatus[pId];
+              return (
               <div
                 key={`${item.product.id}-${item.selectedColor}-${item.selectedSize}`}
                 className="grid grid-cols-1 sm:grid-cols-12 items-center gap-4 py-6 border-b border-zinc-900"
@@ -101,6 +178,19 @@ export default function Cart() {
                         Size: <span className="text-zinc-300">{item.selectedSize}</span>
                       </span>
                     </div>
+
+                    {/* Stock Alert Labels */}
+                    {itemStock && itemStock.available === 0 && (
+                      <span className="text-[9px] bg-red-950/80 text-red-400 border border-red-800 px-2 py-0.5 rounded font-mono uppercase font-bold w-fit mt-1">
+                        Sold Out in Atelier
+                      </span>
+                    )}
+                    {itemStock && itemStock.available > 0 && itemStock.available < item.quantity && (
+                      <span className="text-[9px] bg-amber-950/80 text-amber-400 border border-amber-800 px-2 py-0.5 rounded font-mono uppercase font-bold w-fit mt-1">
+                        Only {itemStock.available} Available in Atelier
+                      </span>
+                    )}
+
                     {/* Delete trigger on mobile */}
                     <button
                       onClick={() =>
@@ -181,7 +271,8 @@ export default function Cart() {
                   </div>
                 </div>
               </div>
-            ))}
+              );
+            })}
 
             <div className="pt-4 flex justify-between items-center text-xs">
               <Link
@@ -279,12 +370,30 @@ export default function Cart() {
 
             {/* Checkout Action */}
             <div className="space-y-3">
-              <Link
-                to="/checkout"
-                className="w-full bg-brand-burgundy hover:bg-brand-burgundyHover text-white py-4 text-center block text-xs font-bold tracking-[0.2em] transition-colors rounded uppercase shadow-lg shadow-brand-burgundy/15"
-              >
-                PROCEED TO CHECKOUT
-              </Link>
+              {hasStockIssue && Object.values(stockStatus).some((s) => s.available === 0) ? (
+                <div className="space-y-2">
+                  <button
+                    disabled
+                    className="w-full bg-zinc-900 border border-red-900/60 text-red-400 py-4 text-center block text-xs font-bold tracking-[0.2em] rounded uppercase cursor-not-allowed opacity-80"
+                  >
+                    RESOLVE OUT-OF-STOCK PIECES
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleRemoveSoldOut}
+                    className="w-full text-center text-[10px] text-zinc-400 hover:text-white uppercase tracking-wider underline block cursor-pointer"
+                  >
+                    Purge Out-of-Stock Pieces
+                  </button>
+                </div>
+              ) : (
+                <Link
+                  to="/checkout"
+                  className="w-full bg-brand-burgundy hover:bg-brand-burgundyHover text-white py-4 text-center block text-xs font-bold tracking-[0.2em] transition-colors rounded uppercase shadow-lg shadow-brand-burgundy/15"
+                >
+                  PROCEED TO CHECKOUT
+                </Link>
+              )}
             </div>
 
             <div className="flex items-center justify-center space-x-2 text-[9px] tracking-widest text-zinc-500 pt-2 font-light">

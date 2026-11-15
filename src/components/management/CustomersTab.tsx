@@ -3,6 +3,7 @@ import { Search, Eye, EyeOff, Filter, X } from "lucide-react";
 import type { CustomerRecord } from "../../types";
 import { AdminService } from "../../services/admin.service";
 import { LuxuryPagination } from "../common/LuxuryPagination";
+import { useLuxuryAlert } from "../../context/LuxuryAlertContext";
 
 interface CustomersTabProps {
   customers: CustomerRecord[];
@@ -13,6 +14,7 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
   customers,
   setCustomers,
 }) => {
+  const { showAlert } = useLuxuryAlert();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [authFilter, setAuthFilter] = useState("all");
@@ -24,8 +26,12 @@ export const CustomersTab: React.FC<CustomersTabProps> = ({
     const nextState = !cust.isActive;
     try {
       await AdminService.toggleCustomerActive(cust._id);
+      showAlert(
+        "info",
+        `Patron "${cust.name}" clearance set to ${nextState ? "Active" : "Suspended"}.`
+      );
     } catch (e: any) {
-      alert("Failed to toggle customer status: " + (e.response?.data?.message || e.message));
+      showAlert("error", "Failed to toggle customer status: " + (e.response?.data?.message || e.message));
       return;
     }
 

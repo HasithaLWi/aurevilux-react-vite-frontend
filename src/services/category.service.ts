@@ -37,6 +37,14 @@ export const CategoryService = {
     return data.data;
   },
 
+  // Toggle category active visibility
+  toggleCategoryActive: async (id: string): Promise<Category> => {
+    const { data } = await api.patch<{ message: string; data: Category }>(
+      `/categories/${id}/toggle-active`
+    );
+    return data.data;
+  },
+
   // Delete category
   deleteCategory: async (id: string): Promise<void> => {
     await api.delete(`/categories/${id}`);
