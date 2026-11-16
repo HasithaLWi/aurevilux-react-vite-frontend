@@ -15,6 +15,7 @@ export interface Product {
   images: string[];
   colors: { name: string; value: string }[];
   sizes: string[];
+  sizeStock?: Array<{ size: string; quantity: number }>;
   brand: string;
   inStock: boolean;
   stockCount?: number;
@@ -262,6 +263,12 @@ export const products: Product[] = [
       { name: "Cream Alabaster", value: "#EAE6DF" }
     ],
     sizes: ["XS", "S", "M", "L"],
+    sizeStock: [
+      { size: "XS", quantity: 0 },
+      { size: "S", quantity: 2 },
+      { size: "M", quantity: 10 },
+      { size: "L", quantity: 6 },
+    ],
     brand: "Zara",
     inStock: true,
     isBestSeller: true,
@@ -311,6 +318,13 @@ export const products: Product[] = [
       { name: "Cream Tan", value: "#EAE6DF" }
     ],
     sizes: ["S", "M", "L", "XL", "XXL"],
+    sizeStock: [
+      { size: "S", quantity: 3 },
+      { size: "M", quantity: 7 },
+      { size: "L", quantity: 5 },
+      { size: "XL", quantity: 2 },
+      { size: "XXL", quantity: 0 },
+    ],
     brand: "Calvin Klein",
     inStock: true,
     isBestSeller: true,

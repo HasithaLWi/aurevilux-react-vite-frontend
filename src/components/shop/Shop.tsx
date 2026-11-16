@@ -755,7 +755,7 @@ const Shop: React.FC = () => {
             ) : (
               /* 2. REAL COUTURE PRODUCTS GRID (Full width responsive layout) */
               <div
-                className={`grid grid-cols-2 md:grid-cols-3 ${
+                className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 ${
                   isFilterSidebarOpen
                     ? "xl:grid-cols-4"
                     : "xl:grid-cols-4 2xl:grid-cols-5"

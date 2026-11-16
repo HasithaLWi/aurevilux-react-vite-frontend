@@ -25,8 +25,8 @@ export type AdminTabId =
   | "brands"
   | "inventory"
   | "reviews"
+  | "couriers"
   | "orders"
-  | "shipping"
   | "customers"
   | "newsletter"
   | "staff"
@@ -66,8 +66,8 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     brands: isAdmin,
     inventory: true,
     reviews: true,
+    couriers: isAdmin,
     orders: true,
-    shipping: true,
     customers: true,
     newsletter: isAdmin,
     staff: isAdmin,
@@ -127,6 +127,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
                 { id: "brands", label: "BRANDS", icon: ShieldCheck },
                 { id: "inventory", label: "INVENTORY", icon: Sliders },
                 { id: "reviews", label: "REVIEWS", icon: Star },
+                { id: "couriers", label: "COURIERS", icon: Truck },
               ].filter((item) => tabAccess[item.id] !== false).map((item) => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
@@ -156,7 +157,6 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             <div className="space-y-0.5">
               {[
                 { id: "orders", label: "ORDERS", icon: ClipboardList },
-                { id: "shipping", label: "SHIPPING", icon: Truck },
               ].filter((item) => tabAccess[item.id] !== false).map((item) => {
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;

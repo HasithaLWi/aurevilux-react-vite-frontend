@@ -1,18 +1,29 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { ShoppingBag, Trash2, Plus, Minus, ShieldCheck, Ticket, AlertTriangle } from "lucide-react";
+import {
+  ShoppingBag,
+  Trash2,
+  Plus,
+  Minus,
+  ShieldCheck,
+  Ticket,
+  AlertTriangle,
+} from "lucide-react";
 import { useApp } from "../context/AppContext";
 import { OrderService } from "../services/order.service";
 
 export default function Cart() {
-  const { cart, removeFromCart, updateCartQuantity, cartTotal, clearCart } = useApp();
+  const { cart, removeFromCart, updateCartQuantity, cartTotal, clearCart } =
+    useApp();
   const [promoCode, setPromoCode] = useState("");
   const [appliedDiscount, setAppliedDiscount] = useState(0); // in percent
   const [promoError, setPromoError] = useState("");
   const [promoSuccess, setPromoSuccess] = useState("");
 
   // Live Stock Availability State
-  const [stockStatus, setStockStatus] = useState<Record<string, { available: number; requested: number }>>({});
+  const [stockStatus, setStockStatus] = useState<
+    Record<string, { available: number; requested: number }>
+  >({});
   const [hasStockIssue, setHasStockIssue] = useState(false);
 
   // Validate cart against backend database on load & when cart changes
@@ -25,16 +36,22 @@ export default function Cart() {
       }
 
       const itemsPayload = cart.map((item) => ({
-        productId: (item.product as any)._id || item.product.id || item.product.slug,
+        productId:
+          (item.product as any)._id || item.product.id || item.product.slug,
+        selectedSize: item.selectedSize,
         quantity: item.quantity,
       }));
 
       try {
         const res = await OrderService.validateCart(itemsPayload);
         if (!res.valid && res.unavailable) {
-          const map: Record<string, { available: number; requested: number }> = {};
+          const map: Record<string, { available: number; requested: number }> =
+            {};
           for (const unav of res.unavailable) {
-            map[unav.productId] = { available: unav.available, requested: unav.requested };
+            map[unav.productId] = {
+              available: unav.available,
+              requested: unav.requested,
+            };
           }
           setStockStatus(map);
           setHasStockIssue(true);
@@ -53,7 +70,8 @@ export default function Cart() {
   // Remove all completely sold-out pieces
   const handleRemoveSoldOut = () => {
     cart.forEach((item) => {
-      const pId = (item.product as any)._id || item.product.id || item.product.slug;
+      const pId =
+        (item.product as any)._id || item.product.id || item.product.slug;
       const status = stockStatus[pId];
       if (status && status.available === 0) {
         removeFromCart(item.product.id, item.selectedColor, item.selectedSize);
@@ -104,7 +122,8 @@ export default function Cart() {
                 Atelier Availability Notice
               </span>
               <p className="text-[11px] text-zinc-400 font-light">
-                Certain pieces in your shopping bag have limited atelier availability or are currently sold out.
+                Certain pieces in your shopping bag have limited atelier
+                availability or are currently sold out.
               </p>
             </div>
           </div>
@@ -142,135 +161,170 @@ export default function Cart() {
             </div>
 
             {cart.map((item) => {
-              const pId = (item.product as any)._id || item.product.id || item.product.slug;
+              const pId =
+                (item.product as any)._id ||
+                item.product.id ||
+                item.product.slug;
               const itemStock = stockStatus[pId];
               return (
-              <div
-                key={`${item.product.id}-${item.selectedColor}-${item.selectedSize}`}
-                className="grid grid-cols-1 sm:grid-cols-12 items-center gap-4 py-6 border-b border-zinc-900"
-              >
-                {/* Product Detail info */}
-                <div className="col-span-12 sm:col-span-6 flex space-x-4">
-                  <div className="w-20 h-24 relative overflow-hidden bg-brand-dark rounded flex-shrink-0 border border-zinc-900">
-                    <img
-                      src={item.product.images[0]}
-                      alt={item.product.name}
-                      className="w-full h-full object-cover object-center"
-                    />
-                  </div>
-                  <div className="flex flex-col justify-center space-y-1">
-                    <span className="text-[9px] tracking-widest text-brand-gold font-semibold uppercase">
-                      {item.product.brand}
-                    </span>
-                    <h3 className="font-serif text-sm text-white uppercase tracking-wider">
-                      <Link
-                        to={`/product/${item.product.id}`}
-                        className="hover:text-brand-gold transition-colors"
-                      >
-                        {item.product.name}
-                      </Link>
-                    </h3>
-                    <div className="flex space-x-3 text-[10px] text-zinc-500 tracking-wider">
-                      <span>
-                        Color: <span className="text-zinc-300">{item.selectedColor}</span>
-                      </span>
-                      <span>
-                        Size: <span className="text-zinc-300">{item.selectedSize}</span>
-                      </span>
+                <div
+                  key={`${item.product.id}-${item.selectedColor}-${item.selectedSize}`}
+                  className="grid grid-cols-1 sm:grid-cols-12 items-center gap-4 py-6 border-b border-zinc-900"
+                >
+                  {/* Product Detail info */}
+                  <div className="col-span-12 sm:col-span-6 flex space-x-4">
+                    <div className="w-20 h-24 relative overflow-hidden bg-brand-dark rounded flex-shrink-0 border border-zinc-900">
+                      <img
+                        src={item.product.images[0]}
+                        alt={item.product.name}
+                        className="w-full h-full object-cover object-center"
+                      />
                     </div>
-
-                    {/* Stock Alert Labels */}
-                    {itemStock && itemStock.available === 0 && (
-                      <span className="text-[9px] bg-red-950/80 text-red-400 border border-red-800 px-2 py-0.5 rounded font-mono uppercase font-bold w-fit mt-1">
-                        Sold Out in Atelier
+                    <div className="flex flex-col justify-center space-y-1">
+                      <span className="text-[9px] tracking-widest text-brand-gold font-semibold uppercase">
+                        {item.product.brand}
                       </span>
-                    )}
-                    {itemStock && itemStock.available > 0 && itemStock.available < item.quantity && (
-                      <span className="text-[9px] bg-amber-950/80 text-amber-400 border border-amber-800 px-2 py-0.5 rounded font-mono uppercase font-bold w-fit mt-1">
-                        Only {itemStock.available} Available in Atelier
-                      </span>
-                    )}
+                      <h3 className="font-serif text-sm text-white uppercase tracking-wider">
+                        <Link
+                          to={`/product/${item.product.id}`}
+                          className="hover:text-brand-gold transition-colors"
+                        >
+                          {item.product.name}
+                        </Link>
+                      </h3>
+                      <div className="flex space-x-3 text-[10px] text-zinc-500 tracking-wider">
+                        <span>
+                          Color:{" "}
+                          <span className="text-zinc-300">
+                            {item.selectedColor}
+                          </span>
+                        </span>
+                        <span>
+                          Size:{" "}
+                          <span className="text-zinc-300">
+                            {item.selectedSize}
+                          </span>
+                        </span>
+                      </div>
 
-                    {/* Delete trigger on mobile */}
-                    <button
-                      onClick={() =>
-                        removeFromCart(
-                          item.product.id,
-                          item.selectedColor,
-                          item.selectedSize
-                        )
-                      }
-                      className="text-red-500 hover:text-red-400 text-[10px] font-semibold tracking-wider text-left pt-1 flex items-center gap-1 sm:hidden w-fit"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" />
-                      <span>REMOVE</span>
-                    </button>
+                      {/* Stock Alert Labels */}
+                      {itemStock && itemStock.available === 0 && (
+                        <span className="text-[9px] bg-red-950/80 text-red-400 border border-red-800 px-2 py-0.5 rounded font-mono uppercase font-bold w-fit mt-1">
+                          Sold Out in Atelier
+                        </span>
+                      )}
+                      {itemStock &&
+                        itemStock.available > 0 &&
+                        itemStock.available < item.quantity && (
+                          <span className="text-[9px] bg-amber-950/80 text-amber-400 border border-amber-800 px-2 py-0.5 rounded font-mono uppercase font-bold w-fit mt-1">
+                            Only {itemStock.available} Available in Atelier
+                          </span>
+                        )}
+
+                      {/* Delete trigger on mobile */}
+                      <button
+                        onClick={() =>
+                          removeFromCart(
+                            item.product.id,
+                            item.selectedColor,
+                            item.selectedSize,
+                          )
+                        }
+                        className="text-red-500 hover:text-red-400 text-[10px] font-semibold tracking-wider text-left pt-1 flex items-center gap-1 sm:hidden w-fit"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>REMOVE</span>
+                      </button>
+                    </div>
                   </div>
-                </div>
 
-                {/* Quantity Controls */}
-                <div className="col-span-6 sm:col-span-2 flex justify-center">
-                  <div className="inline-flex items-center border border-zinc-800 bg-brand-dark/20 rounded">
-                    <button
-                      onClick={() =>
-                        updateCartQuantity(
-                          item.product.id,
-                          item.selectedColor,
-                          item.selectedSize,
-                          item.quantity - 1
-                        )
-                      }
-                      className="px-2 py-1 text-zinc-500 hover:text-white"
-                    >
-                      <Minus className="w-3 h-3" />
-                    </button>
-                    <span className="px-3.5 text-xs font-semibold">{item.quantity}</span>
-                    <button
-                      onClick={() =>
-                        updateCartQuantity(
-                          item.product.id,
-                          item.selectedColor,
-                          item.selectedSize,
-                          item.quantity + 1
-                        )
-                      }
-                      className="px-2 py-1 text-zinc-500 hover:text-white"
-                    >
-                      <Plus className="w-3 h-3" />
-                    </button>
+                  {/* Quantity Controls */}
+                  <div className="col-span-6 sm:col-span-2 flex justify-center">
+                    {(() => {
+                      const sizeStockEntry = (
+                        item.product as any
+                      )?.sizeStock?.find(
+                        (s: any) => s.size === item.selectedSize,
+                      );
+                      const maxStock = sizeStockEntry
+                        ? sizeStockEntry.quantity
+                        : ((item.product as any).stockCount ?? 99);
+                      const isAtMax = item.quantity >= maxStock;
+
+                      return (
+                        <div className="inline-flex items-center border border-zinc-800 bg-brand-dark/20 rounded">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              updateCartQuantity(
+                                item.product.id,
+                                item.selectedColor,
+                                item.selectedSize,
+                                item.quantity - 1,
+                              )
+                            }
+                            className="px-2 py-1 text-zinc-500 hover:text-white"
+                          >
+                            <Minus className="w-3 h-3" />
+                          </button>
+                          <span className="px-3.5 text-xs font-semibold">
+                            {item.quantity}
+                          </span>
+                          <button
+                            type="button"
+                            disabled={isAtMax}
+                            onClick={() =>
+                              updateCartQuantity(
+                                item.product.id,
+                                item.selectedColor,
+                                item.selectedSize,
+                                item.quantity + 1,
+                              )
+                            }
+                            className="px-2 py-1 text-zinc-500 hover:text-white disabled:opacity-25 disabled:cursor-not-allowed transition-opacity"
+                            title={
+                              isAtMax
+                                ? `Max available in size ${item.selectedSize}: ${maxStock}`
+                                : undefined
+                            }
+                          >
+                            <Plus className="w-3 h-3" />
+                          </button>
+                        </div>
+                      );
+                    })()}
                   </div>
-                </div>
 
-                {/* Price */}
-                <div className="col-span-3 sm:col-span-2 text-right hidden sm:block text-xs font-medium text-zinc-400">
-                  ${item.product.price.toLocaleString()}
-                </div>
+                  {/* Price */}
+                  <div className="col-span-3 sm:col-span-2 text-right hidden sm:block text-xs font-medium text-zinc-400">
+                    ${item.product.price.toLocaleString()}
+                  </div>
 
-                {/* Total */}
-                <div className="col-span-6 sm:col-span-2 text-right flex justify-between sm:block items-center">
-                  <span className="text-[10px] text-zinc-500 font-bold uppercase sm:hidden">
-                    SUBTOTAL
-                  </span>
-                  <div className="flex items-center justify-end space-x-3">
-                    <span className="text-xs font-semibold text-brand-gold">
-                      ${(item.product.price * item.quantity).toLocaleString()}
+                  {/* Total */}
+                  <div className="col-span-6 sm:col-span-2 text-right flex justify-between sm:block items-center">
+                    <span className="text-[10px] text-zinc-500 font-bold uppercase sm:hidden">
+                      SUBTOTAL
                     </span>
-                    {/* Remove trigger desktop */}
-                    <button
-                      onClick={() =>
-                        removeFromCart(
-                          item.product.id,
-                          item.selectedColor,
-                          item.selectedSize
-                        )
-                      }
-                      className="text-zinc-600 hover:text-red-500 transition-colors hidden sm:block"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center justify-end space-x-3">
+                      <span className="text-xs font-semibold text-brand-gold">
+                        ${(item.product.price * item.quantity).toLocaleString()}
+                      </span>
+                      {/* Remove trigger desktop */}
+                      <button
+                        onClick={() =>
+                          removeFromCart(
+                            item.product.id,
+                            item.selectedColor,
+                            item.selectedSize,
+                          )
+                        }
+                        className="text-zinc-600 hover:text-red-500 transition-colors hidden sm:block"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
               );
             })}
 
@@ -300,7 +354,9 @@ export default function Cart() {
             <div className="space-y-4 text-xs font-light text-zinc-400 border-b border-zinc-900 pb-6">
               <div className="flex justify-between items-center">
                 <span>BAG SUBTOTAL</span>
-                <span className="text-white font-medium">${cartTotal.toLocaleString()}</span>
+                <span className="text-white font-medium">
+                  ${cartTotal.toLocaleString()}
+                </span>
               </div>
 
               {appliedDiscount > 0 && (
@@ -313,7 +369,9 @@ export default function Cart() {
               <div className="flex justify-between items-center">
                 <span>SHIPPING</span>
                 {shippingFee === 0 ? (
-                  <span className="text-brand-gold font-bold">COMPLIMENTARY</span>
+                  <span className="text-brand-gold font-bold">
+                    COMPLIMENTARY
+                  </span>
                 ) : (
                   <span className="text-white font-medium">${shippingFee}</span>
                 )}
@@ -355,14 +413,18 @@ export default function Cart() {
               )}
               <p className="text-[8px] text-zinc-600 tracking-wider">
                 TRY THE CODE{" "}
-                <span className="text-brand-gold font-semibold">AUREVILUX10</span> FOR A
-                10% DISCOUNT.
+                <span className="text-brand-gold font-semibold">
+                  AUREVILUX10
+                </span>{" "}
+                FOR A 10% DISCOUNT.
               </p>
             </div>
 
             {/* Grand Total */}
             <div className="flex justify-between items-center pt-2 text-sm border-t border-zinc-900/60 mt-4">
-              <span className="text-white font-medium tracking-wider">TOTAL ESTIMATED</span>
+              <span className="text-white font-medium tracking-wider">
+                TOTAL ESTIMATED
+              </span>
               <span className="text-brand-gold font-serif text-xl tracking-wider">
                 ${grandTotal.toLocaleString()}
               </span>
@@ -370,7 +432,8 @@ export default function Cart() {
 
             {/* Checkout Action */}
             <div className="space-y-3">
-              {hasStockIssue && Object.values(stockStatus).some((s) => s.available === 0) ? (
+              {hasStockIssue &&
+              Object.values(stockStatus).some((s) => s.available === 0) ? (
                 <div className="space-y-2">
                   <button
                     disabled
@@ -406,4 +469,3 @@ export default function Cart() {
     </div>
   );
 }
-

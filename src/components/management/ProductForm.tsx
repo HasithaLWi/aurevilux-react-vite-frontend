@@ -60,6 +60,14 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   const [images, setImages] = useState<string[]>(product?.images || []);
   const [colors, setColors] = useState<ProductColor[]>(product?.colors || []);
   const [sizes, setSizes] = useState<string[]>(product?.sizes || ["XS", "S", "M", "L"]);
+  const [sizeStock, setSizeStock] = useState<Array<{ size: string; quantity: number }>>(() => {
+    if (product?.sizeStock && product.sizeStock.length > 0) {
+      return product.sizeStock;
+    }
+    const defaultSizes = product?.sizes || ["XS", "S", "M", "L"];
+    const baseQty = Math.max(1, Math.floor(Number(product?.stockCount || 10) / (defaultSizes.length || 1)));
+    return defaultSizes.map((s) => ({ size: s, quantity: baseQty }));
+  });
   const [specifications, setSpecifications] = useState<ProductSpec[]>(
     product?.specifications && product.specifications.length > 0
       ? product.specifications
@@ -147,7 +155,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     try {
       const uploadedUrls: string[] = [];
       for (const file of files) {
-        const res = await UploadService.uploadSingle(file, "products");
+        const res = await UploadService.uploadSingle(file, "products", "aurevilux-products");
         const url = res?.publicUrl || (res as any)?.url;
         if (url) uploadedUrls.push(url);
       }
@@ -181,10 +189,30 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     const s = sz.trim();
     if (!s || sizes.includes(s)) return;
     setSizes((prev) => [...prev, s]);
+    setSizeStock((prev) => [...prev, { size: s, quantity: 5 }]);
+    setStockCount((prev) => Number(prev) + 5);
   };
 
   const handleRemoveSize = (sz: string) => {
     setSizes((prev) => prev.filter((s) => s !== sz));
+    setSizeStock((prev) => {
+      const updated = prev.filter((s) => s.size !== sz);
+      const newTotal = updated.reduce((sum, item) => sum + item.quantity, 0);
+      setStockCount(newTotal);
+      return updated;
+    });
+  };
+
+  const handleUpdateSizeQty = (sz: string, qty: number) => {
+    const safeQty = Math.max(0, qty);
+    setSizeStock((prev) => {
+      const updated = prev.map((item) =>
+        item.size === sz ? { ...item, quantity: safeQty } : item
+      );
+      const newTotal = updated.reduce((sum, item) => sum + item.quantity, 0);
+      setStockCount(newTotal);
+      return updated;
+    });
   };
 
   // Specifications management
@@ -263,6 +291,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       images: images.slice(0, 5),
       colors,
       sizes,
+      sizeStock,
       specifications: specifications.filter((s) => s.label.trim() && s.value.trim()),
       isActive,
       isBestSeller,
@@ -645,6 +674,44 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                   </button>
                 </div>
               </div>
+
+              {/* Size Stock Allocations */}
+              {sizes.length > 0 && (
+                <div className="pt-3 border-t border-zinc-900/80 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-brand-gold uppercase tracking-widest font-semibold block">
+                      Inventory Allocation per Size (Total: {stockCount} units)
+                    </span>
+                    <span className="text-[9px] text-zinc-500 font-mono">
+                      Real-time SKU variant tracking
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                    {sizeStock.map((item) => (
+                      <div
+                        key={item.size}
+                        className="bg-[#0a0a0c] border border-zinc-800/80 p-2 rounded flex items-center justify-between gap-2"
+                      >
+                        <span className="text-xs font-mono font-semibold text-white">
+                          {item.size}
+                        </span>
+                        <div className="flex items-center gap-1">
+                          <input
+                            type="number"
+                            min={0}
+                            value={item.quantity}
+                            onChange={(e) =>
+                              handleUpdateSizeQty(item.size, parseInt(e.target.value) || 0)
+                            }
+                            className="w-14 bg-zinc-900 border border-zinc-700 text-xs px-2 py-0.5 rounded text-right text-brand-gold font-mono outline-none focus:border-brand-gold"
+                          />
+                          <span className="text-[9px] text-zinc-500 font-mono">pcs</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

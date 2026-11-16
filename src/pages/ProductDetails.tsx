@@ -74,6 +74,25 @@ export default function ProductDetails() {
     loadProduct();
   }, [id]);
 
+  // Derived state (safe when product is null)
+  const isWishlisted = product ? isInWishlist(product.id) : false;
+  const stockCount = (product as any)?.stockCount ?? 10;
+  const isOutOfStock = product ? (stockCount === 0 || product.inStock === false) : false;
+  const selectedSizeInfo = (product as any)?.sizeStock?.find((s: { size: string; quantity: number }) => s.size === selectedSize);
+  const maxAvailableForSize = selectedSizeInfo ? selectedSizeInfo.quantity : stockCount;
+  const isSelectedSizeSoldOut = selectedSizeInfo ? selectedSizeInfo.quantity <= 0 : false;
+  const isLoggedIn = AuthService.isAuthenticated();
+
+  // Clamp quantity whenever selected size or available stock changes (Top-level hook)
+  useEffect(() => {
+    if (!product) return;
+    if (maxAvailableForSize <= 0) {
+      setQuantity(1);
+    } else if (quantity > maxAvailableForSize) {
+      setQuantity(maxAvailableForSize);
+    }
+  }, [product, selectedSize, maxAvailableForSize]);
+
   if (!product) {
     return (
       <div className="min-h-[60vh] flex flex-col items-center justify-center space-y-4 bg-brand-black text-zinc-400">
@@ -126,11 +145,6 @@ export default function ProductDetails() {
     }
   };
 
-  const isWishlisted = isInWishlist(product.id);
-  const stockCount = (product as any).stockCount ?? 10;
-  const isOutOfStock = stockCount === 0 || product.inStock === false;
-  const isLoggedIn = AuthService.isAuthenticated();
-
   const handleAddToCart = () => {
     if (isOutOfStock) return;
     // Require color selection if colors exist
@@ -143,8 +157,21 @@ export default function ProductDetails() {
       showAlert("warning", "Please select a size before adding to bag.");
       return;
     }
+    if (isSelectedSizeSoldOut) {
+      showAlert("warning", `Size ${selectedSize} is currently sold out in the atelier.`, "Size Unavailable");
+      return;
+    }
+    if (quantity > maxAvailableForSize) {
+      showAlert(
+        "warning",
+        `Only ${maxAvailableForSize} piece(s) available in size ${selectedSize}. Please adjust your quantity.`,
+        "Inventory Limit Exceeded"
+      );
+      setQuantity(Math.max(1, maxAvailableForSize));
+      return;
+    }
     addToCart(product, quantity, selectedColor, selectedSize);
-    showAlert("success", `${product.name} added to your shopping bag.`, "Added to Bag");
+    showAlert("success", `${product.name} (${selectedSize || "Standard"}) added to your shopping bag.`, "Added to Bag");
   };
 
   return (
@@ -306,19 +333,47 @@ export default function ProductDetails() {
                 </span>
               </div>
               <div className="flex flex-wrap gap-3">
-                {product.sizes.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => setSelectedSize(s)}
-                    className={`border min-w-[50px] px-4 py-2 text-xs font-semibold tracking-wider transition-all rounded ${
-                      selectedSize === s
-                        ? "border-brand-gold text-brand-gold bg-brand-gold/5 shadow"
-                        : "border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700"
-                    }`}
-                  >
-                    {s}
-                  </button>
-                ))}
+                {product.sizes.map((s) => {
+                  const sizeInfo = (product as any)?.sizeStock?.find((entry: { size: string; quantity: number }) => entry.size === s);
+                  const isSizeSoldOut = sizeInfo ? sizeInfo.quantity <= 0 : false;
+                  const isLowStock = sizeInfo ? sizeInfo.quantity > 0 && sizeInfo.quantity <= 2 : false;
+                  const isSelected = selectedSize === s;
+
+                  return (
+                    <button
+                      key={s}
+                      type="button"
+                      disabled={isSizeSoldOut}
+                      onClick={() => setSelectedSize(s)}
+                      className={`relative border min-w-[58px] px-3.5 py-2 text-xs font-semibold tracking-wider transition-all rounded flex flex-col items-center justify-center ${
+                        isSizeSoldOut
+                          ? "border-zinc-900 bg-zinc-950/60 text-zinc-600 line-through cursor-not-allowed opacity-50"
+                          : isSelected
+                          ? "border-brand-gold text-brand-gold bg-brand-gold/10 shadow-md shadow-brand-gold/10"
+                          : "border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700 bg-transparent"
+                      }`}
+                      title={
+                        isSizeSoldOut
+                          ? `Size ${s} is sold out`
+                          : isLowStock
+                          ? `Only ${sizeInfo?.quantity} left in Atelier`
+                          : `Size ${s}`
+                      }
+                    >
+                      <span>{s}</span>
+                      {isSizeSoldOut && (
+                        <span className="text-[7px] text-zinc-600 uppercase tracking-widest no-underline font-mono">
+                          Sold Out
+                        </span>
+                      )}
+                      {!isSizeSoldOut && isLowStock && (
+                        <span className="text-[7px] text-brand-gold uppercase tracking-widest font-mono">
+                          Only {sizeInfo?.quantity}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -326,27 +381,40 @@ export default function ProductDetails() {
           {/* Quantity selector */}
           {!isOutOfStock ? (
             <div className="space-y-3">
-              <span className="text-[10px] tracking-[0.2em] text-zinc-500 font-bold uppercase block">
-                QUANTITY
-              </span>
+              <div className="flex justify-between items-center max-w-[210px]">
+                <span className="text-[10px] tracking-[0.2em] text-zinc-500 font-bold uppercase block">
+                  QUANTITY
+                </span>
+                {selectedSizeInfo && (
+                  <span className="text-[9px] font-mono text-zinc-500 uppercase">
+                    Max: {maxAvailableForSize}
+                  </span>
+                )}
+              </div>
               <div className="inline-flex items-center border border-zinc-800 bg-brand-black/50 rounded">
                 <button
+                  type="button"
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="px-3.5 py-2 text-zinc-400 hover:text-white"
+                  disabled={quantity <= 1 || isSelectedSizeSoldOut}
+                  className="px-3.5 py-2 text-zinc-400 hover:text-white disabled:opacity-25 disabled:cursor-not-allowed transition-opacity"
+                  title="Decrease quantity"
                 >
                   <Minus className="w-3.5 h-3.5" />
                 </button>
-                <span className="px-5 text-sm font-semibold">{quantity}</span>
+                <span className="px-5 text-sm font-semibold">{isSelectedSizeSoldOut ? 0 : quantity}</span>
                 <button
-                  onClick={() => setQuantity(Math.min(quantity + 1, stockCount))}
-                  className="px-3.5 py-2 text-zinc-400 hover:text-white"
+                  type="button"
+                  onClick={() => setQuantity(Math.min(quantity + 1, maxAvailableForSize))}
+                  disabled={quantity >= maxAvailableForSize || isSelectedSizeSoldOut}
+                  className="px-3.5 py-2 text-zinc-400 hover:text-white disabled:opacity-25 disabled:cursor-not-allowed transition-opacity"
+                  title={quantity >= maxAvailableForSize ? `Max available in size ${selectedSize}: ${maxAvailableForSize}` : "Increase quantity"}
                 >
                   <Plus className="w-3.5 h-3.5" />
                 </button>
               </div>
-              {stockCount <= 5 && stockCount > 0 && (
+              {maxAvailableForSize <= 5 && maxAvailableForSize > 0 && (
                 <p className="text-[10px] text-amber-500 tracking-wider mt-1">
-                  Only {stockCount} left in stock
+                  Only {maxAvailableForSize} left in size {selectedSize}
                 </p>
               )}
             </div>
@@ -360,16 +428,22 @@ export default function ProductDetails() {
           <div className="flex gap-4 max-w-md pt-4">
             <button
               onClick={handleAddToCart}
-              disabled={isOutOfStock}
+              disabled={isOutOfStock || isSelectedSizeSoldOut || quantity > maxAvailableForSize}
               className={`flex-1 py-4 text-center text-xs font-bold tracking-[0.2em] transition-colors rounded uppercase flex items-center justify-center space-x-3 shadow-lg ${
-                isOutOfStock
+                isOutOfStock || isSelectedSizeSoldOut || quantity > maxAvailableForSize
                   ? "bg-zinc-800/80 text-zinc-500 cursor-not-allowed border border-zinc-700 shadow-none"
                   : "bg-brand-burgundy hover:bg-brand-burgundyHover text-white shadow-brand-burgundy/15"
               }`}
             >
               <ShoppingBag className="w-4 h-4" />
               <span>
-                {isOutOfStock ? "SOLD OUT / ARCHIVED" : "ADD TO SHOPPING BAG"}
+                {isOutOfStock
+                  ? "SOLD OUT / ARCHIVED"
+                  : isSelectedSizeSoldOut
+                  ? `SIZE ${selectedSize} SOLD OUT`
+                  : quantity > maxAvailableForSize
+                  ? `ONLY ${maxAvailableForSize} AVAILABLE`
+                  : "ADD TO SHOPPING BAG"}
               </span>
             </button>
             <button

@@ -12,7 +12,7 @@ import { BrandsTab } from "../components/management/BrandsTab";
 import { InventoryTab } from "../components/management/InventoryTab";
 import { ReviewsTab } from "../components/management/ReviewsTab";
 import { OrdersTab } from "../components/management/OrdersTab";
-import { ShippingTab } from "../components/management/ShippingTab";
+import { CouriersTab } from "../components/management/CouriersTab";
 import { CustomersTab } from "../components/management/CustomersTab";
 import { NewsletterTab } from "../components/management/NewsletterTab";
 import { StaffManagementTab } from "../components/management/StaffManagementTab";
@@ -76,8 +76,9 @@ export default function Admin() {
     undefined,
   );
 
-  // Product modal trigger
+  // Product modal trigger & External Edit trigger
   const [showProductModal, setShowProductModal] = useState(false);
+  const [externalEditProduct, setExternalEditProduct] = useState<Product | null>(null);
   const [isBackendOffline, setIsBackendOffline] = useState(false);
 
   // Authenticate & Load Active User
@@ -218,8 +219,8 @@ export default function Admin() {
     brands: isAdmin,
     inventory: true,
     reviews: true,
+    couriers: isAdmin,
     orders: true,
-    shipping: true,
     customers: true,
     newsletter: isAdmin,
     staff: isAdmin,
@@ -347,6 +348,8 @@ export default function Admin() {
             setProducts={setProductsList}
             showModal={showProductModal}
             setShowModal={setShowProductModal}
+            externalEditProduct={externalEditProduct}
+            onClearExternalEdit={() => setExternalEditProduct(null)}
           />
         )}
 
@@ -367,7 +370,14 @@ export default function Admin() {
         )}
 
         {tabAccess[activeTab] && activeTab === "inventory" && (
-          <InventoryTab products={productsList} setProducts={setProductsList} />
+          <InventoryTab
+            products={productsList}
+            setProducts={setProductsList}
+            onEditProduct={(p) => {
+              setExternalEditProduct(p);
+              setActiveTab("products");
+            }}
+          />
         )}
 
         {tabAccess[activeTab] && activeTab === "reviews" && (
@@ -379,12 +389,12 @@ export default function Admin() {
           />
         )}
 
-        {tabAccess[activeTab] && activeTab === "orders" && (
-          <OrdersTab orders={ordersList} setOrders={setOrdersList} />
+        {tabAccess[activeTab] && activeTab === "couriers" && (
+          <CouriersTab />
         )}
 
-        {tabAccess[activeTab] && activeTab === "shipping" && (
-          <ShippingTab orders={ordersList} setOrders={setOrdersList} />
+        {tabAccess[activeTab] && activeTab === "orders" && (
+          <OrdersTab orders={ordersList} setOrders={setOrdersList} />
         )}
 
         {tabAccess[activeTab] && activeTab === "customers" && (

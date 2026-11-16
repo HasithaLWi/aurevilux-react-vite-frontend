@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import {
   ArrowLeft,
   Truck,
@@ -8,9 +9,12 @@ import {
   User,
   MapPin,
   Loader2,
+  ExternalLink,
+  Lock,
 } from "lucide-react";
 import type { Order } from "../../types";
 import { OrderService } from "../../services/order.service";
+import { CourierService, type CourierPartner } from "../../services/courier.service";
 import { useLuxuryAlert } from "../../context/LuxuryAlertContext";
 
 interface OrderDetailPanelProps {
@@ -36,14 +40,23 @@ export const OrderDetailPanel: React.FC<OrderDetailPanelProps> = ({
   const [currentStatus, setCurrentStatus] = useState<string>(order.status || "Pending");
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
 
-  // Tracking details edit
+  // Logistics details edit
   const [isEditingTracking, setIsEditingTracking] = useState(false);
   const [carrier, setCarrier] = useState(order.carrier || "DHL Express Elite");
-  const [trackingNumber, setTrackingNumber] = useState(order.trackingNumber || "");
   const [estimatedDelivery, setEstimatedDelivery] = useState(order.estimatedDelivery || "3-5 Business Days");
   const [isSavingTracking, setIsSavingTracking] = useState(false);
+  const [couriersList, setCouriersList] = useState<CourierPartner[]>([]);
 
-  const orderId = order.id || order.orderNumber || (order as any)._id;
+  const orderId = (order as any)._id || order.id || order.orderNumber;
+  const canEditTracking = ["Processing", "In Transit"].includes(currentStatus);
+
+  useEffect(() => {
+    CourierService.getAllCouriers(false)
+      .then((data) => {
+        if (data && data.length > 0) setCouriersList(data);
+      })
+      .catch((e) => console.warn("Could not load courier partners:", e));
+  }, []);
 
   const handleStatusChange = async (nextStatus: string) => {
     if (nextStatus === currentStatus) return;
@@ -77,11 +90,10 @@ export const OrderDetailPanel: React.FC<OrderDetailPanelProps> = ({
     e.preventDefault();
     setIsSavingTracking(true);
     try {
-      await OrderService.updateTracking(orderId, carrier, trackingNumber, estimatedDelivery);
+      await OrderService.updateTracking(orderId, carrier, "", estimatedDelivery);
       const updated: Order = {
         ...order,
         carrier,
-        trackingNumber,
         estimatedDelivery,
         status: (currentStatus === "Pending" || currentStatus === "Confirmed" || currentStatus === "Processing")
           ? ("In Transit" as any)
@@ -92,9 +104,9 @@ export const OrderDetailPanel: React.FC<OrderDetailPanelProps> = ({
       }
       onUpdateOrder(updated);
       setIsEditingTracking(false);
-      showAlert("success", "Courier tracking assigned and order updated.");
+      showAlert("success", "Courier logistics updated and order status transitioned.");
     } catch (err: any) {
-      showAlert("error", "Failed to assign tracking: " + (err.response?.data?.message || err.message));
+      showAlert("error", "Failed to update courier logistics: " + (err.response?.data?.message || err.message));
     } finally {
       setIsSavingTracking(false);
     }
@@ -224,58 +236,74 @@ export const OrderDetailPanel: React.FC<OrderDetailPanelProps> = ({
             </div>
 
             <div className="divide-y divide-zinc-900">
-              {(order.items || []).map((item: any, idx: number) => (
-                <div key={idx} className="py-4 flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-4">
-                    <div className="w-14 h-16 rounded bg-[#0a0a0c] border border-zinc-800 overflow-hidden flex-shrink-0">
-                      {item.image ? (
-                        <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-zinc-600">
-                          <Package className="w-5 h-5" />
-                        </div>
-                      )}
-                    </div>
-                    <div>
-                      <p className="font-serif text-white uppercase text-sm font-semibold tracking-wide">
-                        {item.name}
-                      </p>
-                      <div className="flex flex-wrap items-center gap-2 mt-1">
-                        {item.brand && (
-                          <span className="text-[10px] text-brand-gold uppercase font-semibold">
-                            {item.brand}
-                          </span>
-                        )}
-                        {item.selectedSize && (
-                          <span className="text-[10px] bg-zinc-900 text-zinc-400 border border-zinc-800 px-2 py-0.5 rounded font-mono uppercase">
-                            Size: {item.selectedSize}
-                          </span>
-                        )}
-                        {item.selectedColor && (
-                          <span className="text-[10px] bg-zinc-900 text-zinc-400 border border-zinc-800 px-2 py-0.5 rounded font-mono uppercase flex items-center gap-1">
-                            {item.selectedColor.value && (
-                              <span
-                                className="w-2 h-2 rounded-full inline-block"
-                                style={{ backgroundColor: item.selectedColor.value }}
-                              />
-                            )}
-                            Color: {item.selectedColor.name || item.selectedColor}
-                          </span>
+              {(order.items || []).map((item: any, idx: number) => {
+                const targetKey = item.slug || item.productId || item._id || item.id || item.name;
+                const productUrl = `/product/${targetKey}`;
+
+                return (
+                  <div key={idx} className="py-4 flex items-center justify-between gap-4">
+                    <Link
+                      to={productUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-4 group cursor-pointer"
+                      title="Inspect piece details in boutique"
+                    >
+                      <div className="w-14 h-16 rounded bg-[#0a0a0c] border border-zinc-800 overflow-hidden flex-shrink-0 group-hover:border-brand-gold transition-colors">
+                        {item.image ? (
+                          <img
+                            src={item.image}
+                            alt={item.name}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-zinc-600">
+                            <Package className="w-5 h-5" />
+                          </div>
                         )}
                       </div>
+                      <div>
+                        <p className="font-serif text-white uppercase text-sm font-semibold tracking-wide group-hover:text-brand-gold transition-colors flex items-center gap-1.5">
+                          <span>{item.name}</span>
+                          <ExternalLink className="w-3 h-3 text-zinc-600 group-hover:text-brand-gold" />
+                        </p>
+                        <div className="flex flex-wrap items-center gap-2 mt-1">
+                          {item.brand && (
+                            <span className="text-[10px] text-brand-gold uppercase font-semibold">
+                              {item.brand}
+                            </span>
+                          )}
+                          {item.selectedSize && (
+                            <span className="text-[10px] bg-zinc-900 text-zinc-400 border border-zinc-800 px-2 py-0.5 rounded font-mono uppercase">
+                              Size: {item.selectedSize}
+                            </span>
+                          )}
+                          {item.selectedColor && (
+                            <span className="text-[10px] bg-zinc-900 text-zinc-400 border border-zinc-800 px-2 py-0.5 rounded font-mono uppercase flex items-center gap-1">
+                              {item.selectedColor.value && (
+                                <span
+                                  className="w-2 h-2 rounded-full inline-block"
+                                  style={{ backgroundColor: item.selectedColor.value }}
+                                />
+                              )}
+                              Color: {item.selectedColor.name || item.selectedColor}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </Link>
+
+                    <div className="text-right flex-shrink-0">
+                      <span className="text-[10px] text-zinc-500 font-mono block">
+                        ${Number(item.price || 0).toLocaleString()} &times; {item.quantity || 1}
+                      </span>
+                      <span className="font-serif text-base text-white font-bold block mt-0.5">
+                        ${((item.price || 0) * (item.quantity || 1)).toLocaleString()}
+                      </span>
                     </div>
                   </div>
-
-                  <div className="text-right flex-shrink-0">
-                    <span className="text-[10px] text-zinc-500 font-mono block">
-                      ${Number(item.price || 0).toLocaleString()} &times; {item.quantity || 1}
-                    </span>
-                    <span className="font-serif text-base text-white font-bold block mt-0.5">
-                      ${((item.price || 0) * (item.quantity || 1)).toLocaleString()}
-                    </span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -284,17 +312,45 @@ export const OrderDetailPanel: React.FC<OrderDetailPanelProps> = ({
             <div className="flex items-center justify-between border-b border-zinc-900 pb-3">
               <div className="flex items-center gap-2.5">
                 <Truck className="w-4 h-4 text-brand-gold" />
-                <h2 className="font-serif text-base uppercase text-white tracking-wider font-semibold">
-                  White-Glove Courier Logistics
-                </h2>
+                <div>
+                  <h2 className="font-serif text-base uppercase text-white tracking-wider font-semibold">
+                    White-Glove Courier Logistics
+                  </h2>
+                  <span className="text-[9px] text-zinc-500 font-mono block">
+                    {canEditTracking
+                      ? "Order is eligible for courier dispatch"
+                      : "Logistics editable when order status enters 'Processing' or 'In Transit'"}
+                  </span>
+                </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsEditingTracking(!isEditingTracking)}
-                className="text-xs text-brand-gold hover:underline uppercase tracking-wider font-semibold"
-              >
-                {isEditingTracking ? "Cancel Edit" : "Edit Logistics"}
-              </button>
+              <div className="flex items-center gap-2">
+                {!canEditTracking && (
+                  <span className="text-[10px] text-zinc-500 font-mono flex items-center gap-1 bg-zinc-900/60 px-2 py-1 rounded border border-zinc-800">
+                    <Lock className="w-3 h-3 text-zinc-500" />
+                    <span>Locked</span>
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!canEditTracking) {
+                      showAlert(
+                        "info",
+                        "Logistics can be assigned once the atelier prepares or dispatches the order. Please advance status to 'Processing' or 'In Transit'."
+                      );
+                      return;
+                    }
+                    setIsEditingTracking(!isEditingTracking);
+                  }}
+                  className={`text-xs uppercase tracking-wider font-semibold transition-colors ${
+                    canEditTracking
+                      ? "text-brand-gold hover:underline cursor-pointer"
+                      : "text-zinc-500 cursor-not-allowed hover:text-zinc-400"
+                  }`}
+                >
+                  {isEditingTracking ? "Cancel Edit" : "Edit Logistics"}
+                </button>
+              </div>
             </div>
 
             {isEditingTracking ? (
@@ -309,39 +365,34 @@ export const OrderDetailPanel: React.FC<OrderDetailPanelProps> = ({
                       onChange={(e) => setCarrier(e.target.value)}
                       className="w-full bg-[#0a0a0c] border border-zinc-800 text-xs px-3 py-2 rounded text-white outline-none focus:border-brand-gold cursor-pointer"
                     >
-                      <option value="DHL Express Elite">DHL Express Elite Worldwide</option>
-                      <option value="FedEx Private Luxe">FedEx Private Luxe International</option>
-                      <option value="Ferrari Logistics">Ferrari Group Haute Logistics (Valuables)</option>
-                      <option value="Malca-Amit">Malca-Amit Luxury Security Express</option>
-                      <option value="Aurevilux Private Concierge">Aurevilux Private White-Glove Concierge</option>
+                      {couriersList.length > 0 ? (
+                        couriersList.map((cp) => (
+                          <option key={cp._id || cp.id || cp.code} value={cp.name}>
+                            {cp.name} ({cp.serviceType || cp.code})
+                          </option>
+                        ))
+                      ) : (
+                        <>
+                          <option value="DHL Express Elite">DHL Express Elite Worldwide</option>
+                          <option value="FedEx Private Luxe">FedEx Private Luxe International</option>
+                          <option value="Ferrari Logistics">Ferrari Group Haute Logistics (Valuables)</option>
+                          <option value="Malca-Amit">Malca-Amit Luxury Security Express</option>
+                        </>
+                      )}
                     </select>
                   </div>
                   <div>
                     <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block mb-1">
-                      Tracking / Waybill Code
+                      Estimated Delivery Window
                     </label>
                     <input
                       type="text"
-                      required
-                      placeholder="e.g. AUR-EXP-98471"
-                      value={trackingNumber}
-                      onChange={(e) => setTrackingNumber(e.target.value)}
-                      className="w-full bg-[#0a0a0c] border border-zinc-800 text-xs px-3 py-2 rounded text-white font-mono outline-none focus:border-brand-gold"
+                      placeholder="e.g. 2-4 Business Days"
+                      value={estimatedDelivery}
+                      onChange={(e) => setEstimatedDelivery(e.target.value)}
+                      className="w-full bg-[#0a0a0c] border border-zinc-800 text-xs px-3 py-2 rounded text-white outline-none focus:border-brand-gold"
                     />
                   </div>
-                </div>
-
-                <div>
-                  <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block mb-1">
-                    Estimated Delivery Window
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 2-4 Business Days"
-                    value={estimatedDelivery}
-                    onChange={(e) => setEstimatedDelivery(e.target.value)}
-                    className="w-full bg-[#0a0a0c] border border-zinc-800 text-xs px-3 py-2 rounded text-white outline-none focus:border-brand-gold"
-                  />
                 </div>
 
                 <div className="flex justify-end gap-2 pt-2">
@@ -358,26 +409,18 @@ export const OrderDetailPanel: React.FC<OrderDetailPanelProps> = ({
                     className="px-4 py-2 bg-brand-burgundy hover:bg-brand-burgundyHover text-white text-xs font-bold uppercase rounded tracking-wider flex items-center gap-1.5"
                   >
                     {isSavingTracking && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                    <span>Confirm Tracking</span>
+                    <span>Confirm Logistics & Dispatch</span>
                   </button>
                 </div>
               </form>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
                 <div className="bg-[#0a0a0c] p-3.5 rounded border border-zinc-900">
                   <span className="text-[9px] text-zinc-500 uppercase tracking-widest font-semibold block">
                     Assigned Courier
                   </span>
                   <span className="font-serif text-white font-semibold text-sm mt-1 block">
                     {order.carrier || "DHL Express Elite"}
-                  </span>
-                </div>
-                <div className="bg-[#0a0a0c] p-3.5 rounded border border-zinc-900">
-                  <span className="text-[9px] text-zinc-500 uppercase tracking-widest font-semibold block">
-                    Waybill Tracking Ref
-                  </span>
-                  <span className="font-mono text-brand-gold font-bold text-sm mt-1 block">
-                    {order.trackingNumber || "Awaiting Dispatch"}
                   </span>
                 </div>
                 <div className="bg-[#0a0a0c] p-3.5 rounded border border-zinc-900">

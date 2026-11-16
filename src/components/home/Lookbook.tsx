@@ -1,11 +1,42 @@
-import React, { useRef } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
-import { lookbook } from "../../data/data";
+import { lookbook as fallbackLookbook } from "../../data/data";
+import { BusinessService } from "../../services/business.service";
 import { gsap, useGSAP, motionTokens } from "../../animations";
 
 const Lookbook: React.FC = () => {
   const sectionRef = useRef<HTMLElement>(null);
+  const [editorial, setEditorial] = useState({
+    title: fallbackLookbook.subtitle || "Modern Elegance",
+    subtitle: fallbackLookbook.title || "THE LOOKBOOK",
+    description: fallbackLookbook.description,
+    quote: fallbackLookbook.quote,
+    quoteCaption: fallbackLookbook.quoteCaption,
+    mainImage: fallbackLookbook.images.main,
+    leftImage: fallbackLookbook.images.left,
+    rightImage: fallbackLookbook.images.right,
+  });
+
+  useEffect(() => {
+    BusinessService.getBusinessInfo()
+      .then((info) => {
+        if (info && info.lookbook) {
+          const lb = info.lookbook;
+          setEditorial({
+            title: lb.title || "Modern Elegance",
+            subtitle: lb.subtitle || "THE LOOKBOOK",
+            description: lb.description || lb.story || fallbackLookbook.description,
+            quote: lb.quote || fallbackLookbook.quote,
+            quoteCaption: lb.quoteCaption || fallbackLookbook.quoteCaption,
+            mainImage: lb.mainImage || fallbackLookbook.images.main,
+            leftImage: lb.leftImage || fallbackLookbook.images.left,
+            rightImage: lb.rightImage || fallbackLookbook.images.right,
+          });
+        }
+      })
+      .catch((e) => console.warn("Live lookbook fetch note:", e));
+  }, []);
 
   useGSAP(
     () => {
@@ -85,7 +116,7 @@ const Lookbook: React.FC = () => {
     <section
       ref={sectionRef}
       id="lookbook"
-      className="w-full py-20 md:py-28 border-t border-zinc-900 overflow-hidden relative"
+      className="w-full py-20 md:py-28 border-t border-zinc-900 overflow-hidden relative text-left"
     >
       <img
         className="w-full h-full absolute bg-gradient-to-r from-brand-black via-brand-black to-transparent top-0 right-0 -z-10 opacity-60 object-cover"
@@ -100,23 +131,25 @@ const Lookbook: React.FC = () => {
           <div data-lookbook-story className="lg:col-span-5 space-y-6 md:space-y-8">
             <div className="space-y-3">
               <span className="text-[10px] md:text-xs tracking-[0.3em] text-brand-burgundy font-semibold uppercase">
-                {lookbook.title}
+                {editorial.subtitle}
               </span>
               <h2 className="font-serif text-4xl md:text-5xl lg:text-6xl text-white tracking-wide leading-tight">
-                {lookbook.subtitle}
+                {editorial.title}
               </h2>
             </div>
 
             <p className="text-sm text-zinc-400 font-light leading-relaxed max-w-md">
-              {lookbook.description}
+              {editorial.description}
             </p>
 
             <div>
               <Link
-                to="/shop"
+                to="/about"
                 className="group inline-flex items-center space-x-3 border border-zinc-800 hover:border-brand-gold px-8 py-3.5 bg-transparent hover:bg-brand-gold/5 transition-all duration-300 rounded"
               >
-                <span className="text-xs font-semibold tracking-[0.2em]">EXPLORE THE STORY</span>
+                <span className="text-xs font-semibold tracking-[0.2em] text-white">
+                  EXPLORE THE STORY
+                </span>
                 <ArrowRight className="w-4 h-4 text-zinc-400 group-hover:text-brand-gold transition-colors" />
               </Link>
             </div>
@@ -130,8 +163,8 @@ const Lookbook: React.FC = () => {
               className="relative aspect-[16/12] w-full overflow-hidden rounded bg-brand-dark border border-zinc-900"
             >
               <img
-                src={lookbook.images.main}
-                alt="Campaign Landscape"
+                src={editorial.mainImage}
+                alt="Campaign Main Editorial"
                 className="w-full h-full object-cover object-center hover:scale-105 transition-transform duration-700"
               />
             </div>
@@ -143,8 +176,8 @@ const Lookbook: React.FC = () => {
                 className="relative aspect-[16/12] overflow-hidden rounded bg-brand-dark border border-zinc-900"
               >
                 <img
-                  src={lookbook.images.left}
-                  alt="Campaign Portrait 1"
+                  src={editorial.leftImage}
+                  alt="Campaign Silhouette Left"
                   className="w-full h-full object-cover object-center hover:scale-105 transition-transform duration-700"
                 />
               </div>
@@ -153,8 +186,8 @@ const Lookbook: React.FC = () => {
                 className="relative aspect-[16/12] overflow-hidden rounded bg-brand-dark border border-zinc-900"
               >
                 <img
-                  src={lookbook.images.right}
-                  alt="Campaign Portrait 2"
+                  src={editorial.rightImage}
+                  alt="Campaign Silhouette Right"
                   className="w-full h-full object-cover object-center hover:scale-105 transition-transform duration-700"
                 />
               </div>
@@ -168,10 +201,10 @@ const Lookbook: React.FC = () => {
           className="pt-16 border-t border-zinc-900 text-center space-y-4 max-w-4xl mx-auto"
         >
           <blockquote className="font-serif text-3xl md:text-5xl lg:text-6xl text-white tracking-wide leading-snug italic font-light">
-            {lookbook.quote}
+            &ldquo;{editorial.quote}&rdquo;
           </blockquote>
           <cite className="block text-[10px] md:text-xs tracking-[0.3em] text-brand-gold font-bold not-italic pt-2">
-            {lookbook.quoteCaption}
+            {editorial.quoteCaption}
           </cite>
         </div>
       </div>
@@ -180,4 +213,3 @@ const Lookbook: React.FC = () => {
 };
 
 export default Lookbook;
-

@@ -53,16 +53,16 @@ export const BrandForm: React.FC<BrandFormProps> = ({
     }
   };
 
-  // Upload Logo to Supabase
+  // Upload Logo to Supabase aurevilux-products bucket
   const handleUploadLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     setIsUploadingLogo(true);
     try {
-      const res = await UploadService.uploadSingle(e.target.files[0], "brands/logos");
+      const res = await UploadService.uploadSingle(e.target.files[0], "brands/logos", "aurevilux-products");
       const url = res?.publicUrl || (res as any)?.url;
       if (url) {
         setLogoUrl(url);
-        showAlert("success", "Maison monogram logo uploaded to Supabase Storage.");
+        showAlert("success", "Maison monogram logo uploaded to Supabase Storage (aurevilux-products).");
       }
     } catch (err: any) {
       showAlert("error", "Logo upload failed: " + (err.message || err));
@@ -71,16 +71,16 @@ export const BrandForm: React.FC<BrandFormProps> = ({
     }
   };
 
-  // Upload Campaign Hero Banner to Supabase
+  // Upload Campaign Hero Banner to Supabase aurevilux-products bucket
   const handleUploadHero = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     setIsUploadingHero(true);
     try {
-      const res = await UploadService.uploadSingle(e.target.files[0], "brands/campaigns");
+      const res = await UploadService.uploadSingle(e.target.files[0], "brands/campaigns", "aurevilux-products");
       const url = res?.publicUrl || (res as any)?.url;
       if (url) {
         setCampaignUrl(url);
-        showAlert("success", "Maison campaign hero banner uploaded to Supabase Storage.");
+        showAlert("success", "Maison campaign hero banner uploaded to Supabase Storage (aurevilux-products).");
       }
     } catch (err: any) {
       showAlert("error", "Campaign banner upload failed: " + (err.message || err));
@@ -306,9 +306,22 @@ export const BrandForm: React.FC<BrandFormProps> = ({
             )}
 
             <div>
-              <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block mb-1">
-                Or Direct Campaign Banner URL
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block">
+                  Or Direct Campaign Banner URL
+                </label>
+                <label className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 text-brand-gold hover:text-white text-[10px] uppercase font-bold tracking-wider rounded border border-zinc-800 hover:border-brand-gold/60 cursor-pointer transition-colors">
+                  <Upload className="w-3 h-3" />
+                  <span>Upload Banner</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleUploadHero}
+                    disabled={isUploadingHero}
+                    className="hidden"
+                  />
+                </label>
+              </div>
               <input
                 type="url"
                 placeholder="https://..."
@@ -371,9 +384,22 @@ export const BrandForm: React.FC<BrandFormProps> = ({
             )}
 
             <div>
-              <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block mb-1">
-                Or Direct Logo URL
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block">
+                  Or Direct Logo URL
+                </label>
+                <label className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 text-brand-gold hover:text-white text-[10px] uppercase font-bold tracking-wider rounded border border-zinc-800 hover:border-brand-gold/60 cursor-pointer transition-colors">
+                  <Upload className="w-3 h-3" />
+                  <span>Upload Logo</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleUploadLogo}
+                    disabled={isUploadingLogo}
+                    className="hidden"
+                  />
+                </label>
+              </div>
               <input
                 type="url"
                 placeholder="https://..."

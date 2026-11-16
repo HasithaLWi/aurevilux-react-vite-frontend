@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import {
   Package,
   ArrowLeft,
-  Copy,
   Check,
   Search,
   Filter,
@@ -16,8 +15,8 @@ interface OrdersTabProps {
   orders: Order[];
   selectedOrderId: string | null;
   setSelectedOrderId: (id: string | null) => void;
-  copiedId: string | null;
-  onCopyTracking: (tracking: string, id: string) => void;
+  copiedId?: string | null;
+  onCopyTracking?: (tracking: string, id: string) => void;
   onCancelOrder: (id: string) => void;
   onReorder: (order: Order) => void;
 }
@@ -26,8 +25,6 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
   orders,
   selectedOrderId,
   setSelectedOrderId,
-  copiedId,
-  onCopyTracking,
   onCancelOrder,
   onReorder,
 }) => {
@@ -243,27 +240,6 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({
                     {activeOrder.trackingNumber}
                   </span>
                 </div>
-                <button
-                  onClick={() =>
-                    onCopyTracking(
-                      activeOrder.trackingNumber!,
-                      activeOrder.id
-                    )
-                  }
-                  className="inline-flex items-center space-x-1.5 border border-zinc-800 hover:border-brand-gold px-3.5 py-1.5 rounded text-[10px] font-bold tracking-widest text-white hover:text-brand-gold uppercase transition-colors"
-                >
-                  {copiedId === activeOrder.id ? (
-                    <>
-                      <Check className="w-3.5 h-3.5 text-emerald-400" />
-                      <span>Copied</span>
-                    </>
-                  ) : (
-                    <>
-                      <Copy className="w-3.5 h-3.5" />
-                      <span>Copy Tracking #</span>
-                    </>
-                  )}
-                </button>
               </div>
             )}
           </div>

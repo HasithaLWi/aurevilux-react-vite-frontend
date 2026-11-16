@@ -179,8 +179,7 @@ const NavBar = () => {
     { name: "HOME", href: "/" },
     { name: "SHOP", href: "/shop" },
     { name: "BRANDS", href: "/brands" },
-    { name: "WISHLIST", href: "/wishlist" },
-    { name: "LOOKBOOK", href: "/#lookbook" },
+    { name: "ABOUT", href: "/about" },
   ];
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -209,13 +208,13 @@ const NavBar = () => {
         {/* Brand Logo */}
         <Link
           to="/"
-          className="font-serif text-2xl md:text-3xl tracking-[0.25em] text-white hover:text-brand-gold transition-colors duration-300"
+          className="font-serif text-2xl md:text-xl lg:text-3xl tracking-[0.25em] text-white hover:text-brand-gold transition-colors duration-300"
         >
           AUREVILUX
         </Link>
 
         {/* Desktop Navigation Menu */}
-        <nav className="hidden md:flex items-center space-x-8 text-xs font-medium tracking-[0.2em]">
+        <nav className="hidden md:flex items-center space-x-5 lg:space-x-8 text-xs font-medium tracking-[0.2em]">
           {navLinks.map((link) => {
             const isActive = location.pathname === link.href;
             return (
@@ -243,7 +242,7 @@ const NavBar = () => {
             className="flex items-center space-x-2 text-zinc-300 hover:text-brand-gold transition-colors duration-200"
             aria-label="Search"
           >
-            <span className="hidden lg:inline text-[10px] tracking-[0.2em] font-medium">
+            <span className="hidden xl:inline text-[10px] tracking-[0.2em] font-medium">
               SEARCH
             </span>
             <Search className="w-[18px] h-[18px]" />
@@ -261,11 +260,11 @@ const NavBar = () => {
           {/* Staff Management Direct Portal Link */}
           {currentUser &&
             currentUser.roles?.some((r) =>
-              ["SUPERADMIN", "SUPER_ADMIN", "ADMIN", "STAFF"].includes(r)
+              ["SUPERADMIN", "SUPER_ADMIN", "ADMIN", "STAFF"].includes(r),
             ) && (
               <Link
                 to="/admin"
-                className="hidden lg:flex items-center space-x-1 px-3 py-1 bg-brand-gold/15 border border-brand-gold/40 text-brand-gold rounded hover:bg-brand-gold/25 transition-colors text-[10px] tracking-widest font-semibold uppercase"
+                className="hidden xl:flex items-center space-x-1 px-3 py-1 bg-brand-gold/15 border border-brand-gold/40 text-brand-gold rounded hover:bg-brand-gold/25 transition-colors text-[10px] tracking-widest font-semibold uppercase"
                 title="Atelier Management Console"
               >
                 <ShieldCheck className="w-3.5 h-3.5 text-brand-gold" />
@@ -290,8 +289,10 @@ const NavBar = () => {
                 ) : (
                   <User className="w-3.5 h-3.5 text-brand-gold" />
                 )}
-                <span className="text-[10px] tracking-widest text-white uppercase font-semibold">
-                  {currentUser.name ? currentUser.name.split(" ")[0] : currentUser.username}
+                <span className="text-[10px] tracking-widest text-white uppercase font-semibold hidden xl:inline">
+                  {currentUser.name
+                    ? currentUser.name.split(" ")[0]
+                    : currentUser.username}
                 </span>
               </Link>
               <button
@@ -621,10 +622,20 @@ const NavBar = () => {
                         ) : (
                           <User className="w-4 h-4 text-brand-gold" />
                         )}
-                        <span>ACCOUNT: {(currentUser.name || currentUser.username).toUpperCase()}</span>
+                        <span>
+                          ACCOUNT:{" "}
+                          {(
+                            currentUser.name || currentUser.username
+                          ).toUpperCase()}
+                        </span>
                       </Link>
                       {currentUser.roles?.some((r) =>
-                        ["SUPERADMIN", "SUPER_ADMIN", "ADMIN", "STAFF"].includes(r)
+                        [
+                          "SUPERADMIN",
+                          "SUPER_ADMIN",
+                          "ADMIN",
+                          "STAFF",
+                        ].includes(r),
                       ) && (
                         <Link
                           to="/admin"

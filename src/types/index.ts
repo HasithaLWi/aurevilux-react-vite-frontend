@@ -91,6 +91,7 @@ export interface Product {
   images: string[];
   colors: ProductColor[];
   sizes: string[];
+  sizeStock?: Array<{ size: string; quantity: number }>;
   brand: string;
   inStock: boolean;
   stockCount?: number;

@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Search, Filter, Eye, X } from "lucide-react";
+import { Search, Filter, Eye, X, Plus, Loader2 } from "lucide-react";
 import type { Order } from "../../types";
 import { OrderService } from "../../services/order.service";
 import { LuxuryPagination } from "../common/LuxuryPagination";
@@ -20,6 +20,27 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({ orders, setOrders }) => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+
+  // VIP Order Creation State
+  const [isCreatingVIPOrder, setIsCreatingVIPOrder] = useState(false);
+  const [isSubmittingVIP, setIsSubmittingVIP] = useState(false);
+  const [vipForm, setVipForm] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    street: "",
+    city: "",
+    state: "",
+    postalCode: "",
+    country: "United States",
+    itemName: "",
+    brand: "Saint Laurent",
+    price: 1500,
+    quantity: 1,
+    size: "M",
+    color: "Noir Onyx",
+    carrier: "DHL Express Elite",
+  });
 
   const handleStatusChange = async (orderId: string, nextStatus: string) => {
     try {
@@ -51,6 +72,55 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({ orders, setOrders }) => {
       })
     );
     setSelectedOrder(updatedOrder);
+  };
+
+  const handleCreateVIPOrder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!vipForm.name || !vipForm.email || !vipForm.street || !vipForm.city || !vipForm.itemName) {
+      showAlert("warning", "Please fill in all client and piece requirements.");
+      return;
+    }
+
+    setIsSubmittingVIP(true);
+    try {
+      const payload = {
+        customer: {
+          name: vipForm.name.trim(),
+          email: vipForm.email.trim(),
+          phone: vipForm.phone.trim(),
+        },
+        shippingAddress: {
+          street: vipForm.street.trim(),
+          city: vipForm.city.trim(),
+          state: vipForm.state.trim() || vipForm.city.trim(),
+          postalCode: vipForm.postalCode.trim(),
+          country: vipForm.country.trim(),
+        },
+        items: [
+          {
+            name: vipForm.itemName.trim(),
+            brand: vipForm.brand,
+            price: Number(vipForm.price),
+            quantity: Number(vipForm.quantity),
+            selectedSize: vipForm.size,
+            selectedColor: vipForm.color,
+          },
+        ],
+        itemsCount: Number(vipForm.quantity),
+        total: Number(vipForm.price) * Number(vipForm.quantity),
+        carrier: vipForm.carrier,
+        paymentMethod: "credit" as const,
+      };
+
+      const created = await OrderService.createOrder(payload);
+      setOrders((prev) => [created, ...prev]);
+      setIsCreatingVIPOrder(false);
+      showAlert("success", `VIP Bespoke Consignment ${created.orderNumber || ""} booked.`);
+    } catch (err: any) {
+      showAlert("error", "Failed to book VIP order: " + (err.response?.data?.message || err.message));
+    } finally {
+      setIsSubmittingVIP(false);
+    }
   };
 
   // If inspecting an order, render full-page OrderDetailPanel
@@ -140,6 +210,13 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({ orders, setOrders }) => {
             Order Fulfillment & Invoicing ({filteredOrders.length})
           </h1>
         </div>
+        <button
+          onClick={() => setIsCreatingVIPOrder(true)}
+          className="bg-brand-burgundy hover:bg-brand-burgundyHover text-white px-4 py-2 rounded text-xs font-bold tracking-widest uppercase flex items-center gap-2 transition-colors shadow-md shadow-brand-burgundy/20"
+        >
+          <Plus className="w-4 h-4" />
+          <span>Book VIP Phone Order</span>
+        </button>
       </div>
 
       {/* Control Bar: Search & Selectors */}
@@ -247,7 +324,7 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({ orders, setOrders }) => {
                 <th className="py-3 px-4">Pieces</th>
                 <th className="py-3 px-4">Total</th>
                 <th className="py-3 px-4">Status Workflow</th>
-                <th className="py-3 px-4">Courier & Tracking</th>
+                <th className="py-3 px-4">Courier Logistics</th>
                 <th className="py-3 px-4 text-right">Actions</th>
               </tr>
             </thead>
@@ -292,14 +369,14 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({ orders, setOrders }) => {
                           <option value="Cancelled">Cancelled</option>
                         </select>
                       </td>
-                      <td className="py-3 px-4 font-mono text-[10px] text-zinc-400">
-                        {ord.trackingNumber ? (
-                          <div>
-                            <span className="text-zinc-200 font-semibold">{ord.trackingNumber}</span>
-                            <span className="text-zinc-500 block text-[9px]">{ord.carrier || "DHL Express"}</span>
-                          </div>
-                        ) : (
-                          <span className="text-zinc-600 italic">Unassigned</span>
+                      <td className="py-3 px-4 text-zinc-300">
+                        <span className="text-zinc-200 font-medium block">
+                          {ord.carrier || "DHL Express Elite"}
+                        </span>
+                        {ord.estimatedDelivery && (
+                          <span className="text-zinc-500 block text-[9px] font-mono">
+                            {ord.estimatedDelivery}
+                          </span>
                         )}
                       </td>
                       <td className="py-3 px-4 text-right">
@@ -331,6 +408,202 @@ export const OrdersTab: React.FC<OrdersTabProps> = ({ orders, setOrders }) => {
           />
         </div>
       </div>
+
+      {/* VIP Phone / Bespoke Booking Modal */}
+      {isCreatingVIPOrder && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#101014] border border-zinc-800 rounded-xl max-w-xl w-full p-6 space-y-5 text-left max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-zinc-800 pb-3">
+              <div>
+                <span className="text-[9px] uppercase tracking-[0.25em] text-brand-gold font-bold">
+                  CONCIERGE DESK
+                </span>
+                <h3 className="font-serif text-lg text-white uppercase tracking-wider font-bold">
+                  Book VIP Phone / Bespoke Order
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsCreatingVIPOrder(false)}
+                className="text-zinc-500 hover:text-white"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateVIPOrder} className="space-y-4">
+              {/* Client Dossier */}
+              <div className="space-y-3">
+                <span className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block border-b border-zinc-900 pb-1">
+                  1. Patron Contact Dossier
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <input
+                    type="text"
+                    required
+                    placeholder="Patron Full Name *"
+                    value={vipForm.name}
+                    onChange={(e) => setVipForm({ ...vipForm, name: e.target.value })}
+                    className="bg-[#0a0a0c] border border-zinc-800 text-xs px-3 py-2 rounded text-white outline-none focus:border-brand-gold"
+                  />
+                  <input
+                    type="email"
+                    required
+                    placeholder="Contact Email *"
+                    value={vipForm.email}
+                    onChange={(e) => setVipForm({ ...vipForm, email: e.target.value })}
+                    className="bg-[#0a0a0c] border border-zinc-800 text-xs px-3 py-2 rounded text-white outline-none focus:border-brand-gold"
+                  />
+                </div>
+                <input
+                  type="tel"
+                  placeholder="Telephone Contact (e.g. +1 555 123 4567)"
+                  value={vipForm.phone}
+                  onChange={(e) => setVipForm({ ...vipForm, phone: e.target.value })}
+                  className="w-full bg-[#0a0a0c] border border-zinc-800 text-xs px-3 py-2 rounded text-white outline-none focus:border-brand-gold"
+                />
+              </div>
+
+              {/* Delivery Address */}
+              <div className="space-y-3">
+                <span className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block border-b border-zinc-900 pb-1">
+                  2. Destination Specification
+                </span>
+                <input
+                  type="text"
+                  required
+                  placeholder="Street Address *"
+                  value={vipForm.street}
+                  onChange={(e) => setVipForm({ ...vipForm, street: e.target.value })}
+                  className="w-full bg-[#0a0a0c] border border-zinc-800 text-xs px-3 py-2 rounded text-white outline-none focus:border-brand-gold"
+                />
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  <input
+                    type="text"
+                    required
+                    placeholder="City *"
+                    value={vipForm.city}
+                    onChange={(e) => setVipForm({ ...vipForm, city: e.target.value })}
+                    className="bg-[#0a0a0c] border border-zinc-800 text-xs px-2.5 py-2 rounded text-white outline-none focus:border-brand-gold"
+                  />
+                  <input
+                    type="text"
+                    placeholder="State / Region"
+                    value={vipForm.state}
+                    onChange={(e) => setVipForm({ ...vipForm, state: e.target.value })}
+                    className="bg-[#0a0a0c] border border-zinc-800 text-xs px-2.5 py-2 rounded text-white outline-none focus:border-brand-gold"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Postal Code"
+                    value={vipForm.postalCode}
+                    onChange={(e) => setVipForm({ ...vipForm, postalCode: e.target.value })}
+                    className="bg-[#0a0a0c] border border-zinc-800 text-xs px-2.5 py-2 rounded text-white outline-none focus:border-brand-gold"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Country"
+                    value={vipForm.country}
+                    onChange={(e) => setVipForm({ ...vipForm, country: e.target.value })}
+                    className="bg-[#0a0a0c] border border-zinc-800 text-xs px-2.5 py-2 rounded text-white outline-none focus:border-brand-gold"
+                  />
+                </div>
+              </div>
+
+              {/* Piece Specification */}
+              <div className="space-y-3">
+                <span className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block border-b border-zinc-900 pb-1">
+                  3. Piece & Settlement Details
+                </span>
+                <div className="grid grid-cols-2 gap-3">
+                  <input
+                    type="text"
+                    required
+                    placeholder="Piece Title (e.g. Silk Velvet Gown) *"
+                    value={vipForm.itemName}
+                    onChange={(e) => setVipForm({ ...vipForm, itemName: e.target.value })}
+                    className="bg-[#0a0a0c] border border-zinc-800 text-xs px-3 py-2 rounded text-white outline-none focus:border-brand-gold"
+                  />
+                  <input
+                    type="text"
+                    placeholder="Maison / Brand"
+                    value={vipForm.brand}
+                    onChange={(e) => setVipForm({ ...vipForm, brand: e.target.value })}
+                    className="bg-[#0a0a0c] border border-zinc-800 text-xs px-3 py-2 rounded text-white outline-none focus:border-brand-gold"
+                  />
+                </div>
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="text-[9px] text-zinc-500 uppercase block mb-1">Unit Valuation ($)</label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={vipForm.price}
+                      onChange={(e) => setVipForm({ ...vipForm, price: parseFloat(e.target.value) || 0 })}
+                      className="w-full bg-[#0a0a0c] border border-zinc-800 text-xs px-3 py-1.5 rounded text-brand-gold font-mono outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[9px] text-zinc-500 uppercase block mb-1">Quantity</label>
+                    <input
+                      type="number"
+                      min={1}
+                      value={vipForm.quantity}
+                      onChange={(e) => setVipForm({ ...vipForm, quantity: parseInt(e.target.value) || 1 })}
+                      className="w-full bg-[#0a0a0c] border border-zinc-800 text-xs px-3 py-1.5 rounded text-white font-mono outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[9px] text-zinc-500 uppercase block mb-1">Size</label>
+                    <input
+                      type="text"
+                      value={vipForm.size}
+                      onChange={(e) => setVipForm({ ...vipForm, size: e.target.value })}
+                      className="w-full bg-[#0a0a0c] border border-zinc-800 text-xs px-3 py-1.5 rounded text-white font-mono outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Courier Selection */}
+              <div>
+                <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block mb-1">
+                  Assigned Private Courier
+                </label>
+                <select
+                  value={vipForm.carrier}
+                  onChange={(e) => setVipForm({ ...vipForm, carrier: e.target.value })}
+                  className="w-full bg-[#0a0a0c] border border-zinc-800 text-xs px-3 py-2 rounded text-white outline-none cursor-pointer"
+                >
+                  <option value="DHL Express Elite">DHL Express Elite Worldwide</option>
+                  <option value="Ferrari Logistics">Ferrari Group Haute Logistics (Valuables)</option>
+                  <option value="FedEx Private Luxe">FedEx Private Luxe Priority</option>
+                  <option value="Malca-Amit Security">Malca-Amit Armored Vault Delivery</option>
+                  <option value="Aurevilux Private Concierge">Aurevilux White-Glove Hand Courier</option>
+                </select>
+              </div>
+
+              {/* Actions */}
+              <div className="flex justify-end gap-3 pt-3 border-t border-zinc-800">
+                <button
+                  type="button"
+                  onClick={() => setIsCreatingVIPOrder(false)}
+                  className="px-4 py-2 border border-zinc-800 text-zinc-400 hover:text-white text-xs uppercase rounded"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingVIP}
+                  className="px-5 py-2 bg-brand-burgundy hover:bg-brand-burgundyHover text-white text-xs font-bold uppercase tracking-widest rounded flex items-center gap-2 shadow-lg shadow-brand-burgundy/20"
+                >
+                  {isSubmittingVIP && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  <span>Authorize VIP Booking</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

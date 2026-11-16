@@ -1,7 +1,8 @@
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Heart, Star, ShoppingBag, Eye, X, Plus, Minus } from "lucide-react";
-import { products, type Product } from "../../data/data";
+import { products as fallbackProducts, type Product } from "../../data/data";
+import { ProductService } from "../../services/product.service";
 import { useApp } from "../../context/AppContext";
 import { gsap, useGSAP, motionTokens } from "../../animations";
 
@@ -9,6 +10,17 @@ const BestSellers: React.FC = () => {
   const { addToCart, toggleWishlist, isInWishlist } = useApp();
   const [activeTab, setActiveTab] = useState<string>("ALL");
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
+  const [liveProducts, setLiveProducts] = useState<Product[]>(fallbackProducts);
+
+  useEffect(() => {
+    ProductService.getProducts()
+      .then((data) => {
+        if (data && data.length > 0) {
+          setLiveProducts(data);
+        }
+      })
+      .catch((e) => console.warn("Live products note for best sellers:", e));
+  }, []);
 
   const sectionRef = useRef<HTMLElement>(null);
   const modalRef = useRef<HTMLDivElement>(null);
@@ -87,11 +99,11 @@ const BestSellers: React.FC = () => {
   );
 
 
-  const filteredProducts = products.filter((p) => {
+  const filteredProducts = liveProducts.filter((p) => {
     if (activeTab === "ALL") return p.isBestSeller;
-    if (activeTab === "WOMEN") return p.category === "women" && p.isBestSeller;
-    if (activeTab === "MEN") return p.category === "men" && p.isBestSeller;
-    if (activeTab === "ACCESSORIES") return p.category === "accessories" && p.isBestSeller;
+    if (activeTab === "WOMEN") return (p.category === "women" || p.department === "women") && p.isBestSeller;
+    if (activeTab === "MEN") return (p.category === "men" || p.department === "men") && p.isBestSeller;
+    if (activeTab === "ACCESSORIES") return (p.category === "accessories" || p.department === "accessories") && p.isBestSeller;
     if (activeTab === "NEW ARRIVALS") return p.isNewArrival;
     return true;
   });

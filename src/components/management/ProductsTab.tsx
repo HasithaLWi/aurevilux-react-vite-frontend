@@ -20,6 +20,8 @@ interface ProductsTabProps {
   setProducts: React.Dispatch<React.SetStateAction<Product[]>>;
   showModal: boolean;
   setShowModal: (open: boolean) => void;
+  externalEditProduct?: Product | null;
+  onClearExternalEdit?: () => void;
 }
 
 export const ProductsTab: React.FC<ProductsTabProps> = ({
@@ -27,6 +29,8 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
   setProducts,
   showModal,
   setShowModal,
+  externalEditProduct,
+  onClearExternalEdit,
 }) => {
   const { showAlert, confirm } = useLuxuryAlert();
   const [viewMode, setViewMode] = useState<"directory" | "form">("directory");
@@ -40,6 +44,15 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
   const [sortBy, setSortBy] = useState("newest");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
+
+  // React to external request to edit product (e.g. from Inventory tab)
+  useEffect(() => {
+    if (externalEditProduct) {
+      setEditingProduct(externalEditProduct);
+      setViewMode("form");
+      onClearExternalEdit?.();
+    }
+  }, [externalEditProduct]);
 
   // React to parent request to open creation form
   useEffect(() => {

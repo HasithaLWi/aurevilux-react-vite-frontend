@@ -34,7 +34,7 @@ export interface CreateOrderPayload {
 export const OrderService = {
   // Validate cart stock before checkout
   validateCart: async (
-    items: Array<{ productId: string; quantity: number }>
+    items: Array<{ productId: string; quantity: number; selectedSize?: string }>
   ): Promise<{
     valid: boolean;
     unavailable: Array<{ productId: string; name: string; available: number; requested: number }>;

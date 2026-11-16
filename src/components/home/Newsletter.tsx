@@ -1,4 +1,5 @@
 import React, { useState, useRef } from "react";
+import { Link } from "react-router-dom";
 import { Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { gsap, useGSAP, motionTokens } from "../../animations";
 import { NewsletterService } from "../../services/newsletter.service";
@@ -184,7 +185,23 @@ const Newsletter: React.FC = () => {
                   </div>
                 </label>
                 <span className="text-[10px] md:text-xs text-zinc-400 font-light leading-snug tracking-wide select-none">
-                  I agree to the Terms & Conditions and Privacy Policy.
+                  I agree to the{" "}
+                  <Link
+                    to="/terms"
+                    target="_blank"
+                    className="text-zinc-300 hover:text-brand-gold underline underline-offset-2 transition-colors font-normal"
+                  >
+                    Terms &amp; Conditions
+                  </Link>{" "}
+                  and{" "}
+                  <Link
+                    to="/privacy"
+                    target="_blank"
+                    className="text-zinc-300 hover:text-brand-gold underline underline-offset-2 transition-colors font-normal"
+                  >
+                    Privacy Policy
+                  </Link>
+                  .
                 </span>
               </div>
             </form>

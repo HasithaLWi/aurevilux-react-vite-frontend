@@ -3,7 +3,6 @@ import {
   ArrowLeft,
   Upload,
   X,
-  Plus,
   Loader2,
   FolderTree,
   AlertCircle,
@@ -30,14 +29,6 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
   // Form State
   const [title, setTitle] = useState(category?.title || "");
   const [slug, setSlug] = useState(category?.slug || "");
-  const [department, setDepartment] = useState<
-    "women" | "men" | "accessories" | "new-arrivals" | "all"
-  >((category?.department as any) || "women");
-  const [parentCategory, setParentCategory] = useState(category?.parentCategory || "");
-  const [subcategories, setSubcategories] = useState<string[]>(
-    category?.subcategories || ["Bags", "Shoes", "Tailoring", "Horology"]
-  );
-  const [newSubcatInput, setNewSubcatInput] = useState("");
   const [description, setDescription] = useState(category?.description || "");
   const [imageUrl, setImageUrl] = useState(category?.image || "");
   const [link, setLink] = useState(category?.link || "");
@@ -61,28 +52,17 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
     }
   };
 
-  const handleAddSubcategory = () => {
-    const s = newSubcatInput.trim();
-    if (!s || subcategories.includes(s)) return;
-    setSubcategories((prev) => [...prev, s]);
-    setNewSubcatInput("");
-  };
-
-  const handleRemoveSubcategory = (target: string) => {
-    setSubcategories((prev) => prev.filter((s) => s !== target));
-  };
-
-  // Upload Banner / Imagery to Supabase Storage
+  // Upload Banner / Imagery to Supabase Storage Bucket aurevilux-products
   const handleUploadImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     const file = e.target.files[0];
     setIsUploading(true);
     try {
-      const res = await UploadService.uploadSingle(file, "categories");
+      const res = await UploadService.uploadSingle(file, "categories", "aurevilux-products");
       const url = res?.publicUrl || (res as any)?.url;
       if (url) {
         setImageUrl(url);
-        showAlert("success", "Category hero banner uploaded to Supabase Storage.");
+        showAlert("success", "Category hero banner uploaded to Supabase Storage (aurevilux-products).");
       }
     } catch (err: any) {
       showAlert("error", "Supabase category upload failed: " + (err.message || err));
@@ -109,9 +89,6 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
     const payload: Partial<Category> = {
       title: title.trim(),
       slug: finalSlug,
-      department,
-      parentCategory: parentCategory.trim() || undefined,
-      subcategories,
       description: description.trim() || `Haute collection of ${title.trim()} curated for Aurevilux patrons.`,
       image:
         imageUrl ||
@@ -152,14 +129,14 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
             type="button"
             onClick={onCancel}
             className="p-2 bg-[#121216] hover:bg-zinc-800 text-zinc-400 hover:text-white rounded border border-zinc-800 transition-colors"
-            title="Return to Taxonomy Directory"
+            title="Return to Category Directory"
           >
             <ArrowLeft className="w-4 h-4" />
           </button>
           <div>
             <div className="flex items-center gap-2">
               <span className="text-[10px] tracking-[0.25em] text-brand-gold uppercase font-bold">
-                TAXONOMY ARCHITECTURE
+                CATEGORY MANAGEMENT
               </span>
               <span className="text-zinc-600 text-xs">&bull;</span>
               <span className="text-[10px] text-zinc-400 uppercase tracking-widest font-mono">
@@ -211,7 +188,7 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
             <div className="flex items-center gap-2.5 border-b border-zinc-900 pb-3">
               <FolderTree className="w-4 h-4 text-brand-gold" />
               <h2 className="font-serif text-base uppercase text-white tracking-wider font-semibold">
-                Category Taxonomy & Identification
+                Category Details & Taxonomy
               </h2>
             </div>
 
@@ -223,7 +200,7 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
                 <input
                   type="text"
                   required
-                  placeholder="e.g. Haute Joaillerie & Horology"
+                  placeholder="e.g. Evening Gowns, High Jewelry, Horology, Leather Goods"
                   value={title}
                   onChange={(e) => handleTitleChange(e.target.value)}
                   className="w-full bg-[#0a0a0c] border border-zinc-800 text-sm px-3.5 py-2.5 rounded text-white outline-none focus:border-brand-gold font-medium"
@@ -237,42 +214,10 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
                   </label>
                   <input
                     type="text"
-                    placeholder="haute-joaillerie-horology"
+                    placeholder="evening-gowns"
                     value={slug}
                     onChange={(e) => setSlug(e.target.value)}
                     className="w-full bg-[#0a0a0c] border border-zinc-800 text-xs px-3.5 py-2.5 rounded text-zinc-300 font-mono outline-none focus:border-brand-gold"
-                  />
-                </div>
-
-                <div>
-                  <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block mb-1.5">
-                    Primary Department
-                  </label>
-                  <select
-                    value={department}
-                    onChange={(e) => setDepartment(e.target.value as any)}
-                    className="w-full bg-[#0a0a0c] border border-zinc-800 text-xs px-3.5 py-2.5 rounded text-white outline-none focus:border-brand-gold cursor-pointer uppercase"
-                  >
-                    <option value="women">Women</option>
-                    <option value="men">Men</option>
-                    <option value="accessories">Accessories</option>
-                    <option value="new-arrivals">New Arrivals</option>
-                    <option value="all">Universal (All Departments)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block mb-1.5">
-                    Parent Category (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Accessories"
-                    value={parentCategory}
-                    onChange={(e) => setParentCategory(e.target.value)}
-                    className="w-full bg-[#0a0a0c] border border-zinc-800 text-xs px-3.5 py-2.5 rounded text-white outline-none focus:border-brand-gold"
                   />
                 </div>
 
@@ -282,7 +227,7 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g. EXPLORE COLLECTION"
+                    placeholder="e.g. DISCOVER COLLECTION"
                     value={buttonText}
                     onChange={(e) => setButtonText(e.target.value)}
                     className="w-full bg-[#0a0a0c] border border-zinc-800 text-xs px-3.5 py-2.5 rounded text-white outline-none focus:border-brand-gold"
@@ -292,65 +237,29 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
 
               <div>
                 <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block mb-1.5">
+                  Storefront Route Link
+                </label>
+                <input
+                  type="text"
+                  placeholder="/shop?category=evening-gowns"
+                  value={link}
+                  onChange={(e) => setLink(e.target.value)}
+                  className="w-full bg-[#0a0a0c] border border-zinc-800 text-xs px-3.5 py-2.5 rounded text-zinc-300 font-mono outline-none focus:border-brand-gold"
+                />
+              </div>
+
+              <div>
+                <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block mb-1.5">
                   Editorial Description
                 </label>
                 <textarea
                   rows={4}
-                  placeholder="Curated horological masterpieces and gemstone haute joaillerie for discerning collectors..."
+                  placeholder="Architectural silhouettes and artisanal craftsmanship curated for Aurevilux patrons..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   className="w-full bg-[#0a0a0c] border border-zinc-800 text-xs p-3 rounded text-white outline-none focus:border-brand-gold leading-relaxed"
                 />
               </div>
-            </div>
-          </div>
-
-          {/* Subcategories Manager */}
-          <div className="bg-[#101014] border border-zinc-900 rounded-lg p-6 space-y-4">
-            <span className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block">
-              Connected Subcategories ({subcategories.length})
-            </span>
-
-            <div className="flex flex-wrap gap-2 items-center">
-              {subcategories.map((sub) => (
-                <span
-                  key={sub}
-                  className="inline-flex items-center gap-1.5 bg-[#0a0a0c] border border-zinc-800 px-3 py-1.5 rounded text-xs font-mono text-zinc-200"
-                >
-                  <span>{sub}</span>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveSubcategory(sub)}
-                    className="text-zinc-500 hover:text-red-400"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </span>
-              ))}
-            </div>
-
-            <div className="flex items-center gap-2 pt-2">
-              <input
-                type="text"
-                placeholder="New subcategory (e.g. Silk Scarves, Evening Clutches)"
-                value={newSubcatInput}
-                onChange={(e) => setNewSubcatInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
-                    handleAddSubcategory();
-                  }
-                }}
-                className="bg-[#0a0a0c] border border-zinc-800 text-xs px-3.5 py-2 rounded text-white outline-none focus:border-brand-gold flex-1"
-              />
-              <button
-                type="button"
-                onClick={handleAddSubcategory}
-                className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-white rounded text-xs font-semibold uppercase tracking-wider flex items-center gap-1.5"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Add</span>
-              </button>
             </div>
           </div>
         </div>
@@ -360,7 +269,7 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
           {/* Banner Imagery */}
           <div className="bg-[#101014] border border-zinc-900 rounded-lg p-6 space-y-4">
             <span className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block">
-              Category Hero Banner (Supabase Storage)
+              Hero Banner Image (Supabase: aurevilux-products)
             </span>
 
             {imageUrl ? (
@@ -381,12 +290,12 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
               </div>
             ) : (
               <label className="aspect-video border-2 border-dashed border-zinc-800 hover:border-brand-gold/60 rounded-lg flex flex-col items-center justify-center cursor-pointer transition-colors text-zinc-500 hover:text-zinc-300 p-4 text-center">
-                <Upload className="w-6 h-6 mb-2" />
-                <span className="text-xs uppercase font-bold tracking-wider">
+                <Upload className="w-6 h-6 mb-2 text-brand-gold" />
+                <span className="text-xs uppercase font-bold tracking-wider text-zinc-300">
                   Upload Category Banner
                 </span>
-                <span className="text-[9px] text-zinc-600 uppercase mt-0.5">
-                  Supabase Bucket &bull; High Resolution
+                <span className="text-[9px] text-zinc-500 uppercase mt-0.5">
+                  Supabase Bucket &bull; aurevilux-products
                 </span>
                 <input
                   type="file"
@@ -401,17 +310,30 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
             {isUploading && (
               <div className="flex items-center gap-2 text-xs text-brand-gold pt-2">
                 <Loader2 className="w-4 h-4 animate-spin" />
-                <span>Uploading banner to Supabase Storage...</span>
+                <span>Uploading banner to aurevilux-products...</span>
               </div>
             )}
 
             <div>
-              <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block mb-1">
-                Or Direct Image URL
-              </label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block">
+                  Or Direct Image URL
+                </label>
+                <label className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-zinc-900 hover:bg-zinc-800 text-brand-gold hover:text-white text-[10px] uppercase font-bold tracking-wider rounded border border-zinc-800 hover:border-brand-gold/60 cursor-pointer transition-colors">
+                  <Upload className="w-3 h-3" />
+                  <span>Upload Image</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleUploadImage}
+                    disabled={isUploading}
+                    className="hidden"
+                  />
+                </label>
+              </div>
               <input
                 type="url"
-                placeholder="https://..."
+                placeholder="https://images.unsplash.com/..."
                 value={imageUrl}
                 onChange={(e) => setImageUrl(e.target.value)}
                 className="w-full bg-[#0a0a0c] border border-zinc-800 text-xs px-3 py-2 rounded text-zinc-300 font-mono outline-none focus:border-brand-gold"
@@ -422,19 +344,19 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
           {/* Visibility Switch */}
           <div className="bg-[#101014] border border-zinc-900 rounded-lg p-6 space-y-4">
             <span className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block">
-              Visibility Settings
+              Storefront Display Settings
             </span>
 
-            <label className="flex items-center justify-between cursor-pointer p-2 rounded hover:bg-zinc-900/40">
+            <label className="flex items-center justify-between cursor-pointer p-2.5 rounded bg-[#0a0a0c] border border-zinc-800 hover:border-zinc-700 transition-colors">
               <div>
                 <span className="text-xs text-white uppercase font-semibold block">Storefront Active</span>
-                <span className="text-[10px] text-zinc-500 block">Show in top navigation & shop filters</span>
+                <span className="text-[10px] text-zinc-500 block">Expose category in catalog navigation</span>
               </div>
               <input
                 type="checkbox"
                 checked={isActive}
                 onChange={(e) => setIsActive(e.target.checked)}
-                className="w-4 h-4 rounded bg-[#0a0a0c] border-zinc-800 text-brand-burgundy focus:ring-0"
+                className="w-4 h-4 rounded bg-[#101014] border-zinc-700 text-brand-burgundy focus:ring-0"
               />
             </label>
           </div>

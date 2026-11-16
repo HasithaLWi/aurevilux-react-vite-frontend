@@ -45,6 +45,13 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       return; // Out of stock — caller should show alert
     }
 
+    // Variant size stock guard
+    const sizeStockEntry = (product as any)?.sizeStock?.find((s: any) => s.size === size);
+    const maxStock = sizeStockEntry ? sizeStockEntry.quantity : stockCount;
+    if (maxStock <= 0) {
+      return; // Size is sold out
+    }
+
     setCart((prevCart) => {
       const existingItemIndex = prevCart.findIndex(
         (item) =>
@@ -56,12 +63,12 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       if (existingItemIndex > -1) {
         const newCart = [...prevCart];
         const newQty = newCart[existingItemIndex].quantity + quantity;
-        // Cap at available stock
-        newCart[existingItemIndex].quantity = Math.min(newQty, stockCount);
+        // Cap at available size stock
+        newCart[existingItemIndex].quantity = Math.min(newQty, maxStock);
         return newCart;
       }
 
-      return [...prevCart, { product, quantity: Math.min(quantity, stockCount), selectedColor: color, selectedSize: size }];
+      return [...prevCart, { product, quantity: Math.min(quantity, maxStock), selectedColor: color, selectedSize: size }];
     });
   };
 
@@ -85,13 +92,18 @@ export const AppContextProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
 
     setCart((prevCart) =>
-      prevCart.map((item) =>
-        item.product.id === productId &&
-        item.selectedColor === color &&
-        item.selectedSize === size
-          ? { ...item, quantity }
-          : item
-      )
+      prevCart.map((item) => {
+        if (
+          item.product.id === productId &&
+          item.selectedColor === color &&
+          item.selectedSize === size
+        ) {
+          const sizeStockEntry = (item.product as any)?.sizeStock?.find((s: any) => s.size === size);
+          const maxStock = sizeStockEntry ? sizeStockEntry.quantity : ((item.product as any).stockCount ?? 999);
+          return { ...item, quantity: Math.min(quantity, maxStock) };
+        }
+        return item;
+      })
     );
   };
 

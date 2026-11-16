@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { ArrowRight, Mail, Shield, Loader2 } from "lucide-react";
 import { NewsletterService } from "../../services/newsletter.service";
 
@@ -17,10 +18,10 @@ const FacebookIcon = () => (
 );
 
 const featuredBrands = [
-  { id: "1", name: "Saint Laurent" },
-  { id: "2", name: "Balmain" },
-  { id: "3", name: "Bottega Veneta" },
-  { id: "4", name: "Valentino" },
+  { id: "1", name: "Saint Laurent", slug: "saint-laurent" },
+  { id: "2", name: "Balmain", slug: "balmain" },
+  { id: "3", name: "Bottega Veneta", slug: "bottega-veneta" },
+  { id: "4", name: "Valentino", slug: "valentino" },
 ];
 
 const Footer = () => {
@@ -61,12 +62,12 @@ const Footer = () => {
       <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 mb-12">
         {/* Brand Col */}
         <div className="space-y-4">
-          <a
-            href="#"
+          <Link
+            to="/"
             className="font-serif text-2xl tracking-[0.2em] text-white hover:text-brand-gold transition-colors duration-300 block"
           >
             AUREVILUX
-          </a>
+          </Link>
           <p className="text-xs leading-relaxed text-zinc-500 font-light">
             Crafting confidence and contemporary elegance. Sourcing the finest silhouettes and bespoke designs for the refined modern wardrobe.
           </p>
@@ -103,10 +104,10 @@ const Footer = () => {
         <div>
           <h4 className="text-white text-xs font-semibold tracking-[0.15em] mb-4 uppercase">COLLECTIONS</h4>
           <ul className="space-y-2 text-xs font-light">
-            <li><a href="#collections" className="hover:text-brand-gold transition-colors">Evening Wear</a></li>
-            <li><a href="#collections" className="hover:text-brand-gold transition-colors">Haute Couture</a></li>
-            <li><a href="#collections" className="hover:text-brand-gold transition-colors">Leather &amp; Accessories</a></li>
-            <li><a href="#collections" className="hover:text-brand-gold transition-colors">Autumn / Winter Edit</a></li>
+            <li><Link to="/shop?category=evening-gowns" className="hover:text-brand-gold transition-colors">Evening Wear</Link></li>
+            <li><Link to="/shop?category=haute-couture" className="hover:text-brand-gold transition-colors">Haute Couture</Link></li>
+            <li><Link to="/shop?category=leather-goods" className="hover:text-brand-gold transition-colors">Leather &amp; Accessories</Link></li>
+            <li><Link to="/shop" className="hover:text-brand-gold transition-colors">Autumn / Winter Edit</Link></li>
           </ul>
         </div>
 
@@ -116,11 +117,16 @@ const Footer = () => {
           <ul className="space-y-2 text-xs font-light">
             {featuredBrands.map((b) => (
               <li key={b.id}>
-                <a href="#brands" className="hover:text-brand-gold transition-colors">
+                <Link to={`/brands/${b.slug}`} className="hover:text-brand-gold transition-colors">
                   {b.name}
-                </a>
+                </Link>
               </li>
             ))}
+            <li>
+              <Link to="/brands" className="text-brand-gold/80 hover:text-brand-gold transition-colors text-[11px] uppercase font-bold tracking-wider pt-1 block">
+                View All Maisons &rarr;
+              </Link>
+            </li>
           </ul>
         </div>
 
@@ -128,10 +134,10 @@ const Footer = () => {
         <div>
           <h4 className="text-white text-xs font-semibold tracking-[0.15em] mb-4 uppercase">CLIENT CONCIERGE</h4>
           <ul className="space-y-2 text-xs font-light">
-            <li><a href="#about" className="hover:text-brand-gold transition-colors">Private Client Services</a></li>
-            <li><a href="#contact" className="hover:text-brand-gold transition-colors">Atelier Appointments</a></li>
-            <li><a href="#shipping" className="hover:text-brand-gold transition-colors">Complimentary Delivery</a></li>
-            <li><a href="#heritage" className="hover:text-brand-gold transition-colors">Brand Heritage</a></li>
+            <li><Link to="/about" className="hover:text-brand-gold transition-colors">Private Client Services</Link></li>
+            <li><Link to="/about" className="hover:text-brand-gold transition-colors">Atelier Appointments</Link></li>
+            <li><Link to="/terms" className="hover:text-brand-gold transition-colors">Complimentary Delivery</Link></li>
+            <li><Link to="/about" className="hover:text-brand-gold transition-colors">Brand Heritage</Link></li>
           </ul>
         </div>
 
@@ -181,6 +187,11 @@ const Footer = () => {
       <div className="max-w-7xl mx-auto pt-8 border-t border-zinc-900 flex flex-col md:flex-row justify-between items-center text-[10px] tracking-widest text-zinc-600 font-light space-y-4 md:space-y-0">
         <div>
           &copy; {new Date().getFullYear()} AUREVILUX. ALL RIGHTS RESERVED.
+        </div>
+        <div className="flex items-center space-x-6 text-[10px] uppercase tracking-wider text-zinc-400">
+          <Link to="/about" className="hover:text-brand-gold transition-colors">About Atelier</Link>
+          <Link to="/terms" className="hover:text-brand-gold transition-colors">Terms &amp; Conditions</Link>
+          <Link to="/privacy" className="hover:text-brand-gold transition-colors">Privacy Covenant</Link>
         </div>
         <div className="flex items-center space-x-2 text-[9px] tracking-wider text-zinc-500">
           <Shield className="w-3.5 h-3.5 text-zinc-600" />

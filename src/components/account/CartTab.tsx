@@ -147,37 +147,53 @@ export const CartTab: React.FC<CartTabProps> = ({
 
                   {/* Quantity */}
                   <div className="col-span-6 sm:col-span-2 flex justify-center">
-                    <div className="inline-flex items-center border border-zinc-800 bg-zinc-900/50 rounded">
-                      <button
-                        onClick={() =>
-                          updateCartQuantity(
-                            item.product.id,
-                            item.selectedColor,
-                            item.selectedSize,
-                            item.quantity - 1
-                          )
-                        }
-                        className="px-2.5 py-1 text-zinc-400 hover:text-white"
-                      >
-                        <Minus className="w-3 h-3" />
-                      </button>
-                      <span className="px-3 text-xs font-semibold">
-                        {item.quantity}
-                      </span>
-                      <button
-                        onClick={() =>
-                          updateCartQuantity(
-                            item.product.id,
-                            item.selectedColor,
-                            item.selectedSize,
-                            item.quantity + 1
-                          )
-                        }
-                        className="px-2.5 py-1 text-zinc-400 hover:text-white"
-                      >
-                        <Plus className="w-3 h-3" />
-                      </button>
-                    </div>
+                    {(() => {
+                      const sizeStockEntry = (item.product as any)?.sizeStock?.find(
+                        (s: any) => s.size === item.selectedSize
+                      );
+                      const maxStock = sizeStockEntry
+                        ? sizeStockEntry.quantity
+                        : ((item.product as any).stockCount ?? 99);
+                      const isAtMax = item.quantity >= maxStock;
+
+                      return (
+                        <div className="inline-flex items-center border border-zinc-800 bg-zinc-900/50 rounded">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              updateCartQuantity(
+                                item.product.id,
+                                item.selectedColor,
+                                item.selectedSize,
+                                item.quantity - 1
+                              )
+                            }
+                            className="px-2.5 py-1 text-zinc-400 hover:text-white"
+                          >
+                            <Minus className="w-3 h-3" />
+                          </button>
+                          <span className="px-3 text-xs font-semibold">
+                            {item.quantity}
+                          </span>
+                          <button
+                            type="button"
+                            disabled={isAtMax}
+                            onClick={() =>
+                              updateCartQuantity(
+                                item.product.id,
+                                item.selectedColor,
+                                item.selectedSize,
+                                item.quantity + 1
+                              )
+                            }
+                            className="px-2.5 py-1 text-zinc-400 hover:text-white disabled:opacity-25 disabled:cursor-not-allowed transition-opacity"
+                            title={isAtMax ? `Max available in size ${item.selectedSize}: ${maxStock}` : undefined}
+                          >
+                            <Plus className="w-3 h-3" />
+                          </button>
+                        </div>
+                      );
+                    })()}
                   </div>
 
                   {/* Unit Price */}

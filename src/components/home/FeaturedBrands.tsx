@@ -1,20 +1,23 @@
-import React, { useRef } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight } from "lucide-react";
-import { brands } from "../../data/data";
+import { brands as fallbackBrands } from "../../data/data";
+import { BrandService } from "../../services/brand.service";
 import { gsap, useGSAP, motionTokens } from "../../animations";
 
-const itemCounts: Record<string, string> = {
-  "nike": "320+ ITEMS",
-  "zara": "850+ ITEMS",
-  "gucci": "210+ ITEMS",
-  "levis": "410+ ITEMS",
-  "calvin-klein": "300+ ITEMS",
-  "tommy-hilfiger": "290+ ITEMS"
-};
-
-const FeaturedBrands: React.FC = () => {
+export const FeaturedBrands: React.FC = () => {
   const sectionRef = useRef<HTMLElement>(null);
+  const [brandsList, setBrandsList] = useState<any[]>(fallbackBrands);
+
+  useEffect(() => {
+    BrandService.getBrands()
+      .then((data) => {
+        if (data && data.length > 0) {
+          setBrandsList(data);
+        }
+      })
+      .catch((e) => console.warn("Live brands fetch note:", e));
+  }, []);
 
   useGSAP(
     () => {
@@ -59,7 +62,7 @@ const FeaturedBrands: React.FC = () => {
   );
 
   return (
-    <section ref={sectionRef} className="relative w-full py-24 md:py-32 bg-[#070708] border-t border-zinc-900/60 overflow-hidden">
+    <section ref={sectionRef} className="relative w-full py-24 md:py-32 bg-[#070708] border-t border-zinc-900/60 overflow-hidden text-left">
       {/* Subtle red ambient glow on the right */}
       <div className="absolute right-[-10%] top-[20%] w-[45vw] h-[45vw] rounded-full bg-brand-burgundy/10 blur-[130px] pointer-events-none" />
 
@@ -81,7 +84,7 @@ const FeaturedBrands: React.FC = () => {
             </p>
             <div className="pt-2">
               <Link
-                to="/shop"
+                to="/brands"
                 className="group flex items-center space-x-2 text-xs font-semibold tracking-[0.2em] text-zinc-300 hover:text-white transition-colors duration-200"
               >
                 <span>EXPLORE ALL BRANDS</span>
@@ -93,45 +96,55 @@ const FeaturedBrands: React.FC = () => {
           {/* Right Column: Grid of Brand Cards */}
           <div className="lg:col-span-9 w-full">
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 md:gap-4 w-full">
-              {brands.map((brand) => (
-                <Link
-                  to={`/shop?brand=${brand.id}`}
-                  key={brand.id}
-                  data-reveal-brand-card
-                  className="group flex flex-col items-center text-center space-y-3 w-full"
-                >
-                  {/* The Visual Card */}
-                  <div className="relative w-full aspect-[2/3] rounded-sm overflow-hidden border border-zinc-900 bg-brand-dark/40 shadow-lg group-hover:border-zinc-700/50 shadow-xl group-hover:shadow-2xl transition-all duration-500">
-                    <img
-                      src={brand.campaignImage}
-                      alt={`${brand.name} Campaign`}
-                      className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-1000 ease-out"
-                    />
+              {brandsList.slice(0, 6).map((brand) => {
+                const brandSlug = brand.slug || brand.id;
+                const brandLogo = brand.logo || "";
+                const brandName = brand.name || "Maison";
 
-                    {/* Dark gradient overlay */}
-                    <div className="absolute inset-0 bg-brand-black/40 group-hover:bg-brand-black/35 transition-colors pointer-events-none" />
-
-                    {/* Centered White Logo inside card */}
-                    <div className="absolute inset-0 flex items-center justify-center p-3 select-none pointer-events-none">
-                      <img
-                        src={brand.logo}
-                        alt={brand.name}
-                        className="max-h-8 max-w-[85%] object-contain filter brightness-0 invert opacity-95 group-hover:opacity-100 transition-all duration-300"
-                      />
+                return (
+                  <Link
+                    to={`/brands/${brandSlug}`}
+                    key={brand._id || brand.id || brandSlug}
+                    data-reveal-brand-card
+                    className="group relative flex flex-col items-center justify-between p-4 md:p-5 rounded-xl bg-[#0f0f12] border border-zinc-800/80 hover:border-zinc-700 transition-all duration-500 overflow-hidden min-h-[170px]"
+                  >
+                    {/* Top Right Dot */}
+                    <div className="w-full flex justify-end">
+                      <div className="w-1.5 h-1.5 rounded-full bg-zinc-700 group-hover:bg-brand-burgundy transition-colors duration-300" />
                     </div>
-                  </div>
 
-                  {/* Brand Info Below Card */}
-                  <div className="space-y-1">
-                    <span className="block text-[11px] font-semibold tracking-[0.2em] text-white uppercase group-hover:text-brand-gold transition-colors duration-300">
-                      {brand.name}
-                    </span>
-                    <span className="block text-[9px] tracking-[0.15em] text-zinc-500 font-medium group-hover:text-zinc-400 transition-colors duration-300">
-                      {itemCounts[brand.id] || "250+ ITEMS"}
-                    </span>
-                  </div>
-                </Link>
-              ))}
+                    {/* Logo Section */}
+                    <div className="flex-1 flex items-center justify-center w-full py-3">
+                      {brandLogo ? (
+                        <div className="w-20 h-14 flex items-center justify-center p-2 rounded bg-white/[0.04] border border-zinc-800 group-hover:border-zinc-600 transition-colors">
+                          <img
+                            src={brandLogo}
+                            alt={brandName}
+                            className="max-h-10 max-w-full object-contain filter grayscale group-hover:grayscale-0 transition-all duration-300"
+                          />
+                        </div>
+                      ) : (
+                        <span className="font-serif text-white text-xs uppercase font-semibold text-center tracking-wider">
+                          {brandName}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Bottom Metadata */}
+                    <div className="w-full text-center space-y-1">
+                      <h4 className="text-[11px] font-bold text-white tracking-widest uppercase font-serif truncate">
+                        {brandName}
+                      </h4>
+                      <span className="text-[9px] text-zinc-500 tracking-wider font-mono block group-hover:text-brand-gold transition-colors">
+                        HAUTE ATELIER
+                      </span>
+                    </div>
+
+                    {/* Bottom accent line on hover */}
+                    <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-brand-burgundy scale-x-0 group-hover:scale-x-100 transition-transform duration-500" />
+                  </Link>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -141,4 +154,3 @@ const FeaturedBrands: React.FC = () => {
 };
 
 export default FeaturedBrands;
-

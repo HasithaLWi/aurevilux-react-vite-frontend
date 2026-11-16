@@ -1,51 +1,25 @@
 import React, { useState } from "react";
-import { Search, Filter, X } from "lucide-react";
+import { Search, Filter, X, Edit3 } from "lucide-react";
 import type { Product } from "../../types";
-import { ProductService } from "../../services/product.service";
 import { LuxuryPagination } from "../common/LuxuryPagination";
-import { useLuxuryAlert } from "../../context/LuxuryAlertContext";
 
 interface InventoryTabProps {
   products: Product[];
   setProducts: React.Dispatch<React.SetStateAction<Product[]>>;
+  onEditProduct?: (product: Product) => void;
 }
 
 export const InventoryTab: React.FC<InventoryTabProps> = ({
   products,
-  setProducts,
+  setProducts: _setProducts,
+  onEditProduct,
 }) => {
-  const { showAlert } = useLuxuryAlert();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedDept, setSelectedDept] = useState("all");
   const [selectedStockHealth, setSelectedStockHealth] = useState("all");
   const [sortBy, setSortBy] = useState("low-first");
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 8;
-
-  const handleAdjustStock = async (product: Product, delta: number) => {
-    const nextCount = Math.max(0, (product.stockCount ?? 10) + delta);
-    const slug = product.slug || product.id || (product as any)._id;
-
-    try {
-      await ProductService.updateStock(slug, nextCount);
-      if (nextCount === 0) {
-        showAlert("warning", `Piece "${product.name}" is now marked OUT OF STOCK.`);
-      } else {
-        showAlert("success", `Stock for "${product.name}" updated to ${nextCount} units.`);
-      }
-    } catch (e: any) {
-      console.warn("Stock update API note:", e);
-      showAlert("error", "Failed to update stock: " + (e.response?.data?.message || e.message));
-    }
-
-    setProducts((prev) =>
-      prev.map((p) =>
-        (p.id === product.id || p.slug === product.slug)
-          ? { ...p, stockCount: nextCount, inStock: nextCount > 0 }
-          : p
-      )
-    );
-  };
 
   const filtered = products
     .filter((p) => {
@@ -233,7 +207,7 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
                 <th className="py-3 px-4">Price</th>
                 <th className="py-3 px-4">Available Units</th>
                 <th className="py-3 px-4">Inventory Health</th>
-                <th className="py-3 px-4 text-right">Quick Stepper</th>
+                <th className="py-3 px-4 text-right">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-900 font-light">
@@ -249,17 +223,22 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
                   const isOut = stock === 0;
                   const isLow = stock > 0 && stock <= 5;
                   return (
-                    <tr key={p.id || p._id} className="hover:bg-zinc-900/30 transition-colors">
+                    <tr
+                      key={p.id || p._id}
+                      onClick={() => onEditProduct && onEditProduct(p)}
+                      className="hover:bg-zinc-900/50 cursor-pointer transition-colors group"
+                      title="Click to edit piece in Product Suite"
+                    >
                       <td className="py-3 px-4 flex items-center space-x-3">
                         <div className="w-9 h-11 rounded bg-zinc-900 overflow-hidden border border-zinc-800 flex-shrink-0">
                           <img
                             src={p.images[0] || "/placeholder.jpg"}
                             alt={p.name}
-                            className="w-full h-full object-cover"
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
                           />
                         </div>
                         <div>
-                          <p className="font-serif text-white font-semibold uppercase">
+                          <p className="font-serif text-white font-semibold uppercase group-hover:text-brand-gold transition-colors">
                             {p.name}
                           </p>
                           <span className="text-[9px] text-brand-gold uppercase font-semibold">
@@ -293,29 +272,17 @@ export const InventoryTab: React.FC<InventoryTabProps> = ({
                         </span>
                       </td>
                       <td className="py-3 px-4 text-right">
-                        <div className="flex items-center justify-end space-x-1 font-mono">
-                          <button
-                            onClick={() => handleAdjustStock(p, -1)}
-                            className="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 rounded text-[11px] font-bold"
-                            title="Decrease 1"
-                          >
-                            -1
-                          </button>
-                          <button
-                            onClick={() => handleAdjustStock(p, 1)}
-                            className="px-2 py-1 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 rounded text-[11px] font-bold"
-                            title="Add 1"
-                          >
-                            +1
-                          </button>
-                          <button
-                            onClick={() => handleAdjustStock(p, 5)}
-                            className="px-2.5 py-1 bg-brand-burgundy/20 hover:bg-brand-burgundy text-brand-gold hover:text-white border border-brand-gold/30 rounded text-[10px] font-bold uppercase tracking-wider"
-                            title="Restock +5 units"
-                          >
-                            +5 Restock
-                          </button>
-                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEditProduct?.(p);
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-zinc-900 group-hover:bg-brand-burgundy/20 border border-zinc-800 group-hover:border-brand-burgundy text-zinc-400 group-hover:text-brand-gold rounded text-[10px] font-bold uppercase tracking-wider transition-colors"
+                        >
+                          <Edit3 className="w-3 h-3" />
+                          <span>Edit Piece</span>
+                        </button>
                       </td>
                     </tr>
                   );

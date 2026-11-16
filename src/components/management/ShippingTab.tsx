@@ -1,7 +1,8 @@
-import React, { useState } from "react";
-import { Truck, X, Search, Filter } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { Truck, X, Search, Filter, ExternalLink } from "lucide-react";
 import type { Order } from "../../types";
 import { OrderService } from "../../services/order.service";
+import { CourierService, type CourierPartner } from "../../services/courier.service";
 import { LuxuryPagination } from "../common/LuxuryPagination";
 import { useLuxuryAlert } from "../../context/LuxuryAlertContext";
 
@@ -16,6 +17,11 @@ export const ShippingTab: React.FC<ShippingTabProps> = ({ orders, setOrders }) =
   const [carrier, setCarrier] = useState("DHL Express Elite");
   const [trackingNumber, setTrackingNumber] = useState("");
   const [estimatedDelivery, setEstimatedDelivery] = useState("3-5 Business Days");
+  const [couriers, setCouriers] = useState<CourierPartner[]>([]);
+
+  useEffect(() => {
+    CourierService.getAllCouriers().then(setCouriers);
+  }, []);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [carrierFilter, setCarrierFilter] = useState("all");
@@ -261,7 +267,24 @@ export const ShippingTab: React.FC<ShippingTabProps> = ({ orders, setOrders }) =
                       </td>
                       <td className="py-3 px-4 font-mono text-zinc-400 text-[11px]">
                         {o.trackingNumber ? (
-                          <span className="text-emerald-400 font-bold">{o.trackingNumber}</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-emerald-400 font-bold">{o.trackingNumber}</span>
+                            <a
+                              href={
+                                o.carrier?.includes("Ferrari")
+                                  ? `https://www.ferrarigroup.net/track?awb=${o.trackingNumber}`
+                                  : o.carrier?.includes("FedEx")
+                                  ? `https://www.fedex.com/fedextrack/?trknbr=${o.trackingNumber}`
+                                  : `https://www.dhl.com/en/express/tracking.html?AWB=${o.trackingNumber}`
+                              }
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-brand-gold hover:text-white p-0.5"
+                              title="Open Carrier Live Tracking"
+                            >
+                              <ExternalLink className="w-3 h-3" />
+                            </a>
+                          </div>
                         ) : (
                           <span className="text-zinc-600 italic">Awaiting Courier Dispatch</span>
                         )}
@@ -322,11 +345,21 @@ export const ShippingTab: React.FC<ShippingTabProps> = ({ orders, setOrders }) =
                   onChange={(e) => setCarrier(e.target.value)}
                   className="w-full bg-brand-black border border-zinc-800 text-xs px-3 py-2 rounded text-white outline-none cursor-pointer"
                 >
-                  <option value="DHL Express Elite">DHL Express Elite Worldwide</option>
-                  <option value="FedEx Private Luxe">FedEx Private Luxe Priority</option>
-                  <option value="Ferrari Logistics">Ferrari Group Haute Logistics (Valuables)</option>
-                  <option value="Malca-Amit">Malca-Amit Luxury Security Express</option>
-                  <option value="Aurevilux Private Concierge">Aurevilux Private White-Glove Concierge</option>
+                  {couriers.length > 0 ? (
+                    couriers.map((c) => (
+                      <option key={c.code} value={c.name}>
+                        {c.name} ({c.serviceType})
+                      </option>
+                    ))
+                  ) : (
+                    <>
+                      <option value="DHL Express Elite">DHL Express Elite Worldwide</option>
+                      <option value="FedEx Private Luxe">FedEx Private Luxe Priority</option>
+                      <option value="Ferrari Logistics">Ferrari Group Haute Logistics (Valuables)</option>
+                      <option value="Malca-Amit">Malca-Amit Luxury Security Express</option>
+                      <option value="Aurevilux Private Concierge">Aurevilux Private White-Glove Concierge</option>
+                    </>
+                  )}
                 </select>
               </div>
 

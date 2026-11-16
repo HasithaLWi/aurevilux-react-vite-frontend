@@ -9,6 +9,7 @@ import WhyShop from "./WhyShop";
 import Testimonials from "./Testimonials";
 import Newsletter from "./Newsletter";
 import { ScrollTrigger } from "../../animations";
+import { FloatingFeedbackPrompt } from "../common/FloatingFeedbackPrompt";
 
 const Home = () => {
   useEffect(() => {
@@ -55,6 +56,9 @@ const Home = () => {
 
       {/* 9. Membership Join Segment */}
       <Newsletter />
+
+      {/* 10. First-Visit Luxury Floating Feedback Concierge */}
+      <FloatingFeedbackPrompt />
     </div>
   );
 };
