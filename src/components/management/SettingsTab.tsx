@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { BusinessService, type BusinessInfo } from "../../services/business.service";
 import { UploadService } from "../../services/upload.service";
+import { validateImageFile, isSupabaseStorageUrl } from "../../utils/imageValidation";
 import { useLuxuryAlert } from "../../context/LuxuryAlertContext";
 
 export const SettingsTab: React.FC = () => {
@@ -92,17 +93,55 @@ export const SettingsTab: React.FC = () => {
     file: File,
     target: "hero" | "left" | "right"
   ) => {
+    // 1. Optimize validation logic (format, extension, size <= 8MB for high-res lookbook photos)
+    const val = validateImageFile(file, { maxSizeMB: 8 });
+    if (!val.valid) {
+      showAlert("warning", val.error || "Invalid lookbook image selected.");
+      return;
+    }
+
+    const previousUrl =
+      target === "hero" ? lookbookHero : target === "left" ? lookbookLeft : lookbookRight;
+
     const setLoader =
       target === "hero" ? setUploadingHero : target === "left" ? setUploadingLeft : setUploadingRight;
     setLoader(true);
     try {
-      const res = await UploadService.uploadSingle(file, "lookbook", "aurevilux-products");
+      // 2. Upload new image to Supabase and purge previous Supabase image if present
+      const res = await UploadService.uploadAndReplace(file, {
+        folder: "lookbook",
+        bucket: "aurevilux-products",
+        previousUrl,
+        validation: { maxSizeMB: 8 },
+      });
       const url = res?.publicUrl || (res as any)?.url;
       if (url) {
         if (target === "hero") setLookbookHero(url);
         if (target === "left") setLookbookLeft(url);
         if (target === "right") setLookbookRight(url);
-        showAlert("success", `Lookbook ${target} imagery uploaded to Supabase Storage.`);
+
+        // 3. Immediately persist new image link to the database
+        await BusinessService.updateBusinessInfo({
+          lookbook: {
+            title: lookbookTitle,
+            subtitle: lookbookSubtitle,
+            quote: lookbookQuote,
+            quoteCaption: lookbookQuoteCaption,
+            description: lookbookQuote,
+            story: lookbookStory,
+            mainImage: target === "hero" ? url : lookbookHero,
+            leftImage: target === "left" ? url : lookbookLeft,
+            rightImage: target === "right" ? url : lookbookRight,
+            galleryImages: [],
+          },
+        });
+
+        showAlert(
+          "success",
+          isSupabaseStorageUrl(previousUrl)
+            ? `Previous lookbook ${target} photo purged from Supabase. New photo uploaded & saved to database.`
+            : `Lookbook ${target} imagery uploaded to Supabase Storage & saved to database.`
+        );
       }
     } catch (err: any) {
       showAlert("error", "Image upload failed: " + (err.message || err));

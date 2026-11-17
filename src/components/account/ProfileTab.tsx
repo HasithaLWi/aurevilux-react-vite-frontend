@@ -1,6 +1,8 @@
 import React, { useRef, useState } from "react";
 import { Trash2, Camera, Loader2, CheckCircle2, ShieldCheck } from "lucide-react";
 import { UploadService } from "../../services/upload.service";
+import { UserService } from "../../services/user.service";
+import { validateImageFile, isSupabaseStorageUrl } from "../../utils/imageValidation";
 
 export interface ProfileFormData {
   name: string;
@@ -35,31 +37,44 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
     profileForm.avatarUrl.includes("googleusercontent.com");
 
   // Handle uploading picture to Supabase bucket 'aurevilux-user'
+  // Checks if previous avatar exists on Supabase; purges it, uploads new avatar, and saves to database
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith("image/")) {
-      setUploadError("Please select a valid image file (JPEG, PNG, or WEBP).");
+    // 1. Optimize validation logic (format, extension, size <= 5MB)
+    const val = validateImageFile(file, { maxSizeMB: 5 });
+    if (!val.valid) {
+      setUploadError(val.error || "Please select a valid image file.");
+      if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
 
-    if (file.size > 5 * 1024 * 1024) {
-      setUploadError("Profile portrait must be less than 5MB.");
-      return;
-    }
-
+    const previousUrl = profileForm.avatarUrl;
     setIsUploading(true);
     setUploadError(null);
     setUploadSuccess(null);
 
     try {
-      const publicUrl = await UploadService.uploadAvatar(file);
+      // 2. Upload new avatar & purge previous Supabase portrait if present
+      const publicUrl = await UploadService.uploadAvatar(file, previousUrl);
       setProfileForm((prev) => ({
         ...prev,
         avatarUrl: publicUrl,
       }));
-      setUploadSuccess("Portrait uploaded successfully to atelier storage.");
+
+      // 3. Immediately persist new avatar link to database
+      try {
+        await UserService.updateUserProfile({ avatarUrl: publicUrl });
+      } catch (dbErr) {
+        console.warn("Could not immediately sync avatar to database:", dbErr);
+      }
+
+      setUploadSuccess(
+        isSupabaseStorageUrl(previousUrl)
+          ? "Previous portrait purged from Supabase. New portrait uploaded & saved to database."
+          : "Portrait uploaded successfully to atelier storage & saved to database."
+      );
     } catch (err: any) {
       console.error("Avatar upload failed:", err);
       setUploadError(
@@ -71,12 +86,26 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
     }
   };
 
-  const handleRemoveAvatar = () => {
+  const handleRemoveAvatar = async () => {
+    const oldUrl = profileForm.avatarUrl;
     setProfileForm((prev) => ({
       ...prev,
       avatarUrl: "",
     }));
-    setUploadSuccess("Custom portrait removed. Monogram will be displayed.");
+
+    if (oldUrl && isSupabaseStorageUrl(oldUrl)) {
+      try {
+        await UploadService.deleteImage(oldUrl);
+      } catch (err) {
+        console.warn("Could not purge avatar from Supabase:", err);
+      }
+    }
+
+    try {
+      await UserService.updateUserProfile({ avatarUrl: "" });
+    } catch {}
+
+    setUploadSuccess("Custom portrait removed and purged from storage. Monogram will be displayed.");
   };
 
   // Compute initials for luxury monogram

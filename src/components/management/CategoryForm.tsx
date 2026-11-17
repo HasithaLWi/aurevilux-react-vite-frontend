@@ -10,6 +10,7 @@ import {
 import type { Category } from "../../types";
 import { CategoryService } from "../../services/category.service";
 import { UploadService } from "../../services/upload.service";
+import { validateImageFile, isSupabaseStorageUrl } from "../../utils/imageValidation";
 import { useLuxuryAlert } from "../../context/LuxuryAlertContext";
 
 interface CategoryFormProps {
@@ -53,22 +54,75 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
   };
 
   // Upload Banner / Imagery to Supabase Storage Bucket aurevilux-products
+  // Checks if an image is already in Supabase; if so, purges old image and saves new link to database
   const handleUploadImage = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     const file = e.target.files[0];
+
+    // 1. Optimize validation logic (format, extension, size <= 5MB)
+    const validation = validateImageFile(file, { maxSizeMB: 5 });
+    if (!validation.valid) {
+      showAlert("warning", validation.error || "Invalid image selected.");
+      e.target.value = "";
+      return;
+    }
+
+    const previousUrl = imageUrl;
     setIsUploading(true);
     try {
-      const res = await UploadService.uploadSingle(file, "categories", "aurevilux-products");
+      // 2. Upload new image to Supabase and purge previous Supabase image if present
+      const res = await UploadService.uploadAndReplace(file, {
+        folder: "categories",
+        bucket: "aurevilux-products",
+        previousUrl,
+        validation: { maxSizeMB: 5 },
+      });
       const url = res?.publicUrl || (res as any)?.url;
       if (url) {
         setImageUrl(url);
-        showAlert("success", "Category hero banner uploaded to Supabase Storage (aurevilux-products).");
+
+        // 3. If editing an existing category, persist the new image link to the database immediately
+        if (isEditing && category) {
+          const catId = category._id || category.id || category.slug;
+          if (catId) {
+            await CategoryService.updateCategory(catId, { image: url });
+          }
+        }
+
+        showAlert(
+          "success",
+          isSupabaseStorageUrl(previousUrl)
+            ? "Previous image purged from Supabase. New image uploaded and linked in database."
+            : "Category hero banner uploaded to Supabase Storage (aurevilux-products) & linked."
+        );
       }
     } catch (err: any) {
       showAlert("error", "Supabase category upload failed: " + (err.message || err));
     } finally {
       setIsUploading(false);
+      e.target.value = "";
     }
+  };
+
+  const handleRemoveImage = async () => {
+    const oldUrl = imageUrl;
+    setImageUrl("");
+    if (oldUrl && isSupabaseStorageUrl(oldUrl)) {
+      try {
+        await UploadService.deleteImage(oldUrl);
+      } catch (err) {
+        console.warn("Could not purge category image from Supabase:", err);
+      }
+    }
+    if (isEditing && category) {
+      const catId = category._id || category.id || category.slug;
+      if (catId) {
+        try {
+          await CategoryService.updateCategory(catId, { image: "" });
+        } catch {}
+      }
+    }
+    showAlert("info", "Hero banner removed and purged from storage.");
   };
 
   // Form Submit
@@ -281,9 +335,9 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({
                 />
                 <button
                   type="button"
-                  onClick={() => setImageUrl("")}
+                  onClick={handleRemoveImage}
                   className="absolute top-2 right-2 p-1.5 bg-black/80 hover:bg-red-600 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                  title="Remove image"
+                  title="Remove and purge image"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>

@@ -10,6 +10,7 @@ import {
 import type { Brand } from "../../types";
 import { BrandService } from "../../services/brand.service";
 import { UploadService } from "../../services/upload.service";
+import { validateImageFile, isSupabaseStorageUrl } from "../../utils/imageValidation";
 import { useLuxuryAlert } from "../../context/LuxuryAlertContext";
 
 interface BrandFormProps {
@@ -54,39 +55,149 @@ export const BrandForm: React.FC<BrandFormProps> = ({
   };
 
   // Upload Logo to Supabase aurevilux-products bucket
+  // Checks if logo already exists in Supabase; if so, removes it and saves new link to database
   const handleUploadLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
+    const file = e.target.files[0];
+
+    // 1. Optimize validation logic (format, extension, size <= 5MB)
+    const validation = validateImageFile(file, { maxSizeMB: 5 });
+    if (!validation.valid) {
+      showAlert("warning", validation.error || "Invalid logo image selected.");
+      e.target.value = "";
+      return;
+    }
+
+    const previousUrl = logoUrl;
     setIsUploadingLogo(true);
     try {
-      const res = await UploadService.uploadSingle(e.target.files[0], "brands/logos", "aurevilux-products");
+      // 2. Upload new logo to Supabase and purge previous Supabase logo if present
+      const res = await UploadService.uploadAndReplace(file, {
+        folder: "brands/logos",
+        bucket: "aurevilux-products",
+        previousUrl,
+        validation: { maxSizeMB: 5 },
+      });
       const url = res?.publicUrl || (res as any)?.url;
       if (url) {
         setLogoUrl(url);
-        showAlert("success", "Maison monogram logo uploaded to Supabase Storage (aurevilux-products).");
+
+        // 3. If editing an existing brand, persist new logo link to database immediately
+        if (isEditing && brand) {
+          const brandId = brand._id || brand.id;
+          if (brandId) {
+            await BrandService.updateBrand(brandId, { logo: url });
+          }
+        }
+
+        showAlert(
+          "success",
+          isSupabaseStorageUrl(previousUrl)
+            ? "Previous logo purged from Supabase. New logo uploaded and linked in database."
+            : "Maison monogram logo uploaded to Supabase Storage (aurevilux-products) & linked."
+        );
       }
     } catch (err: any) {
       showAlert("error", "Logo upload failed: " + (err.message || err));
     } finally {
       setIsUploadingLogo(false);
+      e.target.value = "";
     }
   };
 
+  const handleRemoveLogo = async () => {
+    const oldUrl = logoUrl;
+    setLogoUrl("");
+    if (oldUrl && isSupabaseStorageUrl(oldUrl)) {
+      try {
+        await UploadService.deleteImage(oldUrl);
+      } catch (err) {
+        console.warn("Could not purge logo from Supabase:", err);
+      }
+    }
+    if (isEditing && brand) {
+      const brandId = brand._id || brand.id;
+      if (brandId) {
+        try {
+          await BrandService.updateBrand(brandId, { logo: "" });
+        } catch {}
+      }
+    }
+    showAlert("info", "Maison logo removed and purged from storage.");
+  };
+
   // Upload Campaign Hero Banner to Supabase aurevilux-products bucket
+  // Checks if banner already exists in Supabase; if so, removes it and saves new link to database
   const handleUploadHero = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
+    const file = e.target.files[0];
+
+    // 1. Optimize validation logic (format, extension, size <= 8MB for high-res banners)
+    const validation = validateImageFile(file, { maxSizeMB: 8 });
+    if (!validation.valid) {
+      showAlert("warning", validation.error || "Invalid campaign banner selected.");
+      e.target.value = "";
+      return;
+    }
+
+    const previousUrl = campaignUrl;
     setIsUploadingHero(true);
     try {
-      const res = await UploadService.uploadSingle(e.target.files[0], "brands/campaigns", "aurevilux-products");
+      // 2. Upload new banner to Supabase and purge previous Supabase banner if present
+      const res = await UploadService.uploadAndReplace(file, {
+        folder: "brands/campaigns",
+        bucket: "aurevilux-products",
+        previousUrl,
+        validation: { maxSizeMB: 8 },
+      });
       const url = res?.publicUrl || (res as any)?.url;
       if (url) {
         setCampaignUrl(url);
-        showAlert("success", "Maison campaign hero banner uploaded to Supabase Storage (aurevilux-products).");
+
+        // 3. If editing an existing brand, persist new banner link to database immediately
+        if (isEditing && brand) {
+          const brandId = brand._id || brand.id;
+          if (brandId) {
+            await BrandService.updateBrand(brandId, {
+              campaignImage: url,
+            });
+          }
+        }
+
+        showAlert(
+          "success",
+          isSupabaseStorageUrl(previousUrl)
+            ? "Previous banner purged from Supabase. New campaign hero uploaded and linked in database."
+            : "Maison campaign hero banner uploaded to Supabase Storage (aurevilux-products) & linked."
+        );
       }
     } catch (err: any) {
       showAlert("error", "Campaign banner upload failed: " + (err.message || err));
     } finally {
       setIsUploadingHero(false);
+      e.target.value = "";
     }
+  };
+
+  const handleRemoveCampaign = async () => {
+    const oldUrl = campaignUrl;
+    setCampaignUrl("");
+    if (oldUrl && isSupabaseStorageUrl(oldUrl)) {
+      try {
+        await UploadService.deleteImage(oldUrl);
+      } catch (err) {
+        console.warn("Could not purge campaign banner from Supabase:", err);
+      }
+    }
+    if (isEditing && brand) {
+      const brandId = brand._id || brand.id;
+      if (brandId) {
+        try {
+          await BrandService.updateBrand(brandId, { campaignImage: "" });
+        } catch {}
+      }
+    }
+    showAlert("info", "Campaign hero banner removed and purged from storage.");
   };
 
   // Submit Handler
@@ -272,9 +383,9 @@ export const BrandForm: React.FC<BrandFormProps> = ({
                 />
                 <button
                   type="button"
-                  onClick={() => setCampaignUrl("")}
+                  onClick={handleRemoveCampaign}
                   className="absolute top-2 right-2 p-1.5 bg-black/80 hover:bg-red-600 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                  title="Remove Campaign Banner"
+                  title="Remove and purge Campaign Banner"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -350,9 +461,9 @@ export const BrandForm: React.FC<BrandFormProps> = ({
                 />
                 <button
                   type="button"
-                  onClick={() => setLogoUrl("")}
+                  onClick={handleRemoveLogo}
                   className="absolute top-1 right-1 p-1 bg-black/80 hover:bg-red-600 text-white rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                  title="Remove Logo"
+                  title="Remove and purge Logo"
                 >
                   <X className="w-3 h-3" />
                 </button>

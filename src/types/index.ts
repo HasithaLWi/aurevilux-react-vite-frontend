@@ -221,6 +221,7 @@ export interface TimelineStep {
 
 export type OrderStatus =
   | "Pending"
+  | "Confirmed"
   | "Processing"
   | "In Transit"
   | "Out for Delivery"

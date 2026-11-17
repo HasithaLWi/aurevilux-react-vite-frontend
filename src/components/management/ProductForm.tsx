@@ -19,6 +19,7 @@ import { ProductService } from "../../services/product.service";
 import { BrandService } from "../../services/brand.service";
 import { CategoryService } from "../../services/category.service";
 import { UploadService } from "../../services/upload.service";
+import { validateImageFile, isSupabaseStorageUrl } from "../../utils/imageValidation";
 import { useLuxuryAlert } from "../../context/LuxuryAlertContext";
 
 interface ProductFormProps {
@@ -142,34 +143,85 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   };
 
   // Handle Supabase Multi-Image Upload (Max 5)
+  // Validates file types and sizes; uploads to Supabase and saves links to database
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files || e.target.files.length === 0) return;
     const files = Array.from(e.target.files);
 
     if (images.length + files.length > 5) {
       showAlert("warning", "Aurevilux policy allows a maximum of 5 images per luxury piece.", "Image Limit Reached");
+      e.target.value = "";
       return;
+    }
+
+    // 1. Optimize validation logic for all selected files
+    for (const file of files) {
+      const val = validateImageFile(file, { maxSizeMB: 5 });
+      if (!val.valid) {
+        showAlert("warning", val.error || `File ${file.name} failed image validation.`);
+        e.target.value = "";
+        return;
+      }
     }
 
     setIsUploading(true);
     try {
       const uploadedUrls: string[] = [];
       for (const file of files) {
-        const res = await UploadService.uploadSingle(file, "products", "aurevilux-products");
+        const res = await UploadService.uploadAndReplace(file, {
+          folder: "products",
+          bucket: "aurevilux-products",
+          validation: { maxSizeMB: 5 },
+        });
         const url = res?.publicUrl || (res as any)?.url;
         if (url) uploadedUrls.push(url);
       }
-      setImages((prev) => [...prev, ...uploadedUrls]);
-      showAlert("success", `Successfully uploaded ${uploadedUrls.length} piece image(s) to Supabase Storage.`);
+
+      const nextImages = [...images, ...uploadedUrls];
+      setImages(nextImages);
+
+      // 2. If editing an existing product, persist new image links to database immediately
+      if (isEditing && product) {
+        const prodId = product._id || product.id || product.slug;
+        if (prodId) {
+          await ProductService.updateProduct(prodId, { images: nextImages });
+        }
+      }
+
+      showAlert("success", `Successfully uploaded ${uploadedUrls.length} piece image(s) to Supabase Storage & saved to database.`);
     } catch (err: any) {
       showAlert("error", "Supabase image upload failed: " + (err.message || err));
     } finally {
       setIsUploading(false);
+      e.target.value = "";
     }
   };
 
-  const handleRemoveImage = (index: number) => {
-    setImages((prev) => prev.filter((_, i) => i !== index));
+  const handleRemoveImage = async (index: number) => {
+    const targetUrl = images[index];
+    const nextImages = images.filter((_, i) => i !== index);
+    setImages(nextImages);
+
+    // 1. If image was in Supabase storage, purge it so no orphaned files remain
+    if (targetUrl && isSupabaseStorageUrl(targetUrl)) {
+      try {
+        await UploadService.deleteImage(targetUrl);
+      } catch (err) {
+        console.warn("Could not purge product photo from Supabase:", err);
+      }
+    }
+
+    // 2. If editing an existing product, update database immediately
+    if (isEditing && product) {
+      const prodId = product._id || product.id || product.slug;
+      if (prodId) {
+        try {
+          await ProductService.updateProduct(prodId, { images: nextImages });
+        } catch {}
+      }
+    }
+
+    showAlert("info", "Piece photo removed and purged from Supabase Storage.");
   };
 
   // Color management

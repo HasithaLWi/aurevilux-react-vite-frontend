@@ -10,7 +10,7 @@ export interface BusinessLookbook {
   mainImage: string;
   leftImage: string;
   rightImage: string;
-  galleryImages: string[];
+  galleryImages?: string[];
 }
 
 export interface BusinessInfo {
