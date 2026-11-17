@@ -1,16 +1,20 @@
 /**
  * CinematicVideoIntro — Aurevilux Luxury Cinematic Product Introduction
  *
- * Two-layer synchronized video architecture:
- *   Layer 1 (z-10): Full-bleed background video (original, with background)
- *   Layer 2 (z-30): Transparent foreground video (alpha channel; model/product only)
- *   Shopping Panel: z-20 by default → z-40 on hover (always reachable via pointer-events passthrough)
+ * THE 3-LAYER "SANDWICH" DEPTH ARCHITECTURE:
+ *   Layer 1 (z-10): Pristine original background video (100% brightness, no darkening gradients).
+ *   Layer 2 (z-20): Editorial typography (Brand, massive serif title, price/season).
+ *                   Sits BEHIND the model, but IN FRONT OF the room/background video.
+ *   Layer 3 (z-30): Transparent foreground video (model only with alpha channel).
+ *                   Sits directly in front of the typography.
+ *                   Because Layer 1 underneath has the EXACT identical pixels, any imperfect
+ *                   alpha cutout edges blend seamlessly into the background video below!
+ *   Layer 4 (z-40): Shopping Panel on hover (and Skip Intro button), giving 100% user agency.
  *
  * High-Performance Smooth Sync Engine:
- *   - Uses dynamic playbackRate ramping (1.08x / 0.92x) for drift correction (< 40ms).
- *   - NEVER triggers hard currentTime seeks during playback (hard seeks cause VP9 buffer flushes and extreme lag).
- *   - Listens to master timeupdate (~4Hz) instead of 60-144Hz RAF loop, saving CPU & GPU decoding headroom.
- *   - Coordinated play, pause, buffer waiting, and ended transitions.
+ *   - Dynamic playbackRate ramping (1.08x / 0.92x) for drift correction (< 40ms).
+ *   - ZERO hard currentTime seeks during normal playback (prevents VP9 buffer flushes).
+ *   - Native timeupdate (~4Hz) instead of 60-144Hz RAF loop.
  */
 
 import React, {
@@ -28,6 +32,8 @@ import type { EditorialVideoSource } from "../../types";
 interface CinematicVideoIntroProps {
   editorialVideo: EditorialVideoSource;
   productName: string;
+  brand?: string;
+  price?: number;
   /** Called when the intro dissolves and the gallery should become visible */
   onIntroComplete: () => void;
 }
@@ -46,6 +52,8 @@ function shouldSkipForDataSaver(): boolean {
 const CinematicVideoIntro: React.FC<CinematicVideoIntroProps> = ({
   editorialVideo,
   productName,
+  brand,
+  price,
   onIntroComplete,
 }) => {
   const bgVideoRef = useRef<HTMLVideoElement>(null);
@@ -53,7 +61,6 @@ const CinematicVideoIntro: React.FC<CinematicVideoIntroProps> = ({
   const wrapperRef = useRef<HTMLDivElement>(null);
   const introTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isDissolvingRef = useRef(false);
-  const [isPanelHovered, setIsPanelHovered] = useState(false);
   const [introStarted, setIntroStarted] = useState(false);
 
   // ── Dissolve out and hand off to the normal gallery ─────────────────────────
@@ -77,7 +84,6 @@ const CinematicVideoIntro: React.FC<CinematicVideoIntroProps> = ({
       duration: 0.8,
       ease: "power2.inOut",
       onComplete: () => {
-        // Pause both streams and release decoder memory
         if (bgVideoRef.current) {
           bgVideoRef.current.pause();
         }
@@ -90,9 +96,6 @@ const CinematicVideoIntro: React.FC<CinematicVideoIntroProps> = ({
   }, [onIntroComplete]);
 
   // ── High-Performance Smooth Sync Engine ─────────────────────────────────────
-  // Uses playbackRate ramping instead of hard .currentTime seeks!
-  // Hard seeks cause browser VP9 decoder buffer flushes, resulting in massive stutter.
-  // Dynamic playbackRate adjusts timing continuously with ZERO frame drops.
   const handleTimeUpdate = useCallback(() => {
     const master = bgVideoRef.current;
     const slave = fgVideoRef.current;
@@ -103,18 +106,15 @@ const CinematicVideoIntro: React.FC<CinematicVideoIntroProps> = ({
     const diff = master.currentTime - slave.currentTime;
     const absDiff = Math.abs(diff);
 
-    // If drift is catastrophic (> 0.4s, e.g. tab switch), perform a hard seek
+    // Only hard-seek on catastrophic desync (e.g. background tab)
     if (absDiff > 0.4) {
       slave.currentTime = master.currentTime;
       slave.playbackRate = 1.0;
     } else if (diff > 0.04) {
-      // Slave is slightly behind -> speed it up gently (no re-seek, butter smooth)
       slave.playbackRate = 1.08;
     } else if (diff < -0.04) {
-      // Slave is slightly ahead -> slow it down gently
       slave.playbackRate = 0.92;
     } else {
-      // In lockstep (< 40ms) -> standard 1.0x playback
       if (slave.playbackRate !== 1.0) {
         slave.playbackRate = 1.0;
       }
@@ -127,7 +127,6 @@ const CinematicVideoIntro: React.FC<CinematicVideoIntroProps> = ({
     const fg = fgVideoRef.current;
     if (!bg || !fg) return;
 
-    // Skip entirely on data-saver or reduced-motion preference
     if (
       shouldSkipForDataSaver() ||
       window.matchMedia("(prefers-reduced-motion: reduce)").matches
@@ -148,17 +147,14 @@ const CinematicVideoIntro: React.FC<CinematicVideoIntroProps> = ({
       started = true;
 
       try {
-        // Reset both streams to frame 0
         bg.currentTime = 0;
         fg.currentTime = 0;
         bg.playbackRate = 1.0;
         fg.playbackRate = 1.0;
 
-        // Atomic play — both streams start simultaneously
         await Promise.all([bg.play(), fg.play()]);
         setIntroStarted(true);
 
-        // Calculate dynamic hold duration: use video duration if available, else config
         const calculatedDuration =
           editorialVideo.duration ??
           (bg.duration && bg.duration > 0 ? Math.min(bg.duration, 7.5) : 6.5);
@@ -168,7 +164,6 @@ const CinematicVideoIntro: React.FC<CinematicVideoIntroProps> = ({
           dissolveAndComplete();
         }, introDurationMs);
       } catch (err) {
-        // Autoplay blocked (e.g. mobile policy) -> skip gracefully
         console.warn("[CinematicVideoIntro] Autoplay blocked, skipping intro:", err);
         onIntroComplete();
       }
@@ -183,7 +178,6 @@ const CinematicVideoIntro: React.FC<CinematicVideoIntroProps> = ({
       tryStart();
     };
 
-    // Synchronize play/pause states if master buffers
     const onMasterWaiting = () => {
       if (!fg.paused) fg.pause();
     };
@@ -196,13 +190,11 @@ const CinematicVideoIntro: React.FC<CinematicVideoIntroProps> = ({
       dissolveAndComplete();
     };
 
-    // Wire up events
     bg.addEventListener("timeupdate", handleTimeUpdate);
     bg.addEventListener("waiting", onMasterWaiting);
     bg.addEventListener("playing", onMasterPlaying);
     bg.addEventListener("ended", onMasterEnded);
 
-    // readyState >= 3 (HAVE_FUTURE_DATA) or 4 (HAVE_ENOUGH_DATA)
     if (bg.readyState >= 3) {
       bgReady = true;
     } else {
@@ -215,11 +207,8 @@ const CinematicVideoIntro: React.FC<CinematicVideoIntroProps> = ({
       fg.addEventListener("canplay", onFgReady, { once: true });
     }
 
-    // Kick off loading
     bg.load();
     fg.load();
-
-    // In case both were already cached / buffered
     tryStart();
 
     return () => {
@@ -244,20 +233,16 @@ const CinematicVideoIntro: React.FC<CinematicVideoIntroProps> = ({
     return () => window.removeEventListener("keydown", handleKey);
   }, [dissolveAndComplete]);
 
-  // ─────────────────────────────────────────────────────────────────────────────
-
   return (
-    /**
-     * CINEMATIC WRAPPER — absolute over the entire section, same dimensions
-     * ref: wrapperRef (target of GSAP dissolve)
-     */
     <div
       ref={wrapperRef}
       aria-hidden="true"
-      className="absolute inset-0 z-50 overflow-hidden"
+      className="absolute inset-0 pointer-events-none select-none overflow-hidden"
     >
       {/* =================================================================== */}
-      {/* LAYER 1 — FULL-BLEED BACKGROUND VIDEO (z-10)                        */}
+      {/* LAYER 1 — PRISTINE ORIGINAL BACKGROUND VIDEO (z-10)                 */}
+      {/* 100% natural brightness, NO darkening gradients over it, so that the*/}
+      {/* transparent video pixels match 100% and hide cutout imperfections!  */}
       {/* =================================================================== */}
       <video
         ref={bgVideoRef}
@@ -265,37 +250,62 @@ const CinematicVideoIntro: React.FC<CinematicVideoIntroProps> = ({
         playsInline
         preload="auto"
         poster={editorialVideo.poster}
-        aria-label={`${productName} editorial background`}
+        aria-label={`${productName} background video`}
         className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none z-10 [transform:translateZ(0)] [backface-visibility:hidden]"
       >
         <source src={editorialVideo.backgroundVideo} type="video/webm" />
         <source src={editorialVideo.backgroundVideo} type="video/mp4" />
       </video>
 
-      {/* Dark gradient vignettes — identical to the static backdrop system   */}
-      <div className="absolute right-0 top-0 bottom-0 w-full lg:w-[48%] bg-gradient-to-l from-brand-black via-brand-black/90 to-transparent pointer-events-none z-20" />
-      <div className="absolute left-0 top-0 bottom-0 w-28 sm:w-36 bg-gradient-to-r from-brand-black/85 via-brand-black/40 to-transparent pointer-events-none z-20" />
-      <div className="absolute inset-x-0 top-0 h-32 bg-gradient-to-b from-brand-black via-brand-black/50 to-transparent pointer-events-none z-20" />
-      <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-brand-black via-brand-black/50 to-transparent pointer-events-none z-20" />
+      {/* =================================================================== */}
+      {/* LAYER 2 — EDITORIAL TYPOGRAPHY SANDWICH (z-[15])                    */}
+      {/* Placed BEHIND the transparent model (z-30), but IN FRONT OF the    */}
+      {/* original background room/video (z-10).                             */}
+      {/* Creates the iconic "Model stepping in front of the text" effect!   */}
+      {/* =================================================================== */}
+      <div className="absolute inset-0 z-[15] flex flex-col justify-center px-8 sm:px-14 md:px-20 lg:px-24 pointer-events-none select-none">
+        <div className="max-w-4xl space-y-3 sm:space-y-4">
+          {/* Brand Eyebrow */}
+          <div className="flex items-center space-x-3">
+            <div className="w-8 h-[1px] bg-brand-gold" />
+            <span className="text-[10px] sm:text-xs md:text-sm tracking-[0.35em] text-brand-gold font-bold uppercase drop-shadow-[0_4px_16px_rgba(0,0,0,0.9)]">
+              {brand || "AUREVILUX ATELIER"}
+            </span>
+          </div>
 
-      {/* Ambient glows (hardware-friendly radial gradients, no runtime blur filter) */}
-      <div className="absolute left-[15%] top-[25%] w-[450px] h-[450px] bg-[radial-gradient(circle,rgba(109,26,42,0.22)_0%,transparent_70%)] rounded-full pointer-events-none z-20" />
-      <div className="absolute right-[20%] top-[20%] w-[380px] h-[380px] bg-[radial-gradient(circle,rgba(88,28,135,0.18)_0%,transparent_70%)] rounded-full pointer-events-none z-20" />
+          {/* Majestic Headline — the transparent model in Layer 3 physically occludes this! */}
+          <h1 className="font-serif text-5xl sm:text-7xl md:text-8xl lg:text-9xl text-white tracking-tight uppercase leading-[0.92] drop-shadow-[0_15px_35px_rgba(0,0,0,0.95)]">
+            {productName}
+          </h1>
+
+          {/* Pricing & Season tag */}
+          {price !== undefined && (
+            <div className="pt-2 flex items-center space-x-4">
+              <span className="font-serif text-2xl sm:text-3xl text-brand-gold font-semibold drop-shadow-[0_4px_16px_rgba(0,0,0,0.9)]">
+                ${price.toLocaleString()}
+              </span>
+              <span className="text-zinc-300 text-xs sm:text-sm tracking-[0.25em] uppercase font-light drop-shadow-[0_4px_12px_rgba(0,0,0,0.9)]">
+                &bull; COUTURE COLLECTION
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* =================================================================== */}
-      {/* LAYER 2 — TRANSPARENT FOREGROUND VIDEO (z-30 / z-10 on panel hover) */}
+      {/* LAYER 3 — TRANSPARENT FOREGROUND VIDEO (z-30)                       */}
+      {/* Sits directly ON TOP of the typography in Layer 2 and unhovered     */}
+      {/* Shopping Panel. Because Layer 1 plays directly underneath at 1-to-1 */}
+      {/* coordinates, any rough or soft alpha edges blend seamlessly into    */}
+      {/* the real pixels!                                                    */}
       {/* =================================================================== */}
       <video
         ref={fgVideoRef}
         muted
         playsInline
         preload="auto"
-        aria-label={`${productName} editorial model foreground`}
-        className={`absolute inset-0 w-full h-full object-cover object-center pointer-events-none [transform:translateZ(0)] [backface-visibility:hidden] transition-opacity duration-500 ${
-          isPanelHovered
-            ? "z-10 opacity-30"
-            : "z-30 opacity-100"
-        }`}
+        aria-label={`${productName} transparent model foreground`}
+        className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none z-30 [transform:translateZ(0)] [backface-visibility:hidden]"
       >
         {/* Safari / iOS: HEVC alpha (must be listed first) */}
         {editorialVideo.transparentVideoHevc && (
@@ -312,20 +322,11 @@ const CinematicVideoIntro: React.FC<CinematicVideoIntroProps> = ({
       </video>
 
       {/* =================================================================== */}
-      {/* SHOPPING PANEL HOVER DETECTOR (invisible overlay on the right 32%)   */}
+      {/* LAYER 4 — SKIP INTRO & HUD CONTROLS (z-50)                          */}
+      {/* Always clickable and elevated at z-50                               */}
       {/* =================================================================== */}
       <div
-        aria-hidden="true"
-        className="absolute right-0 top-0 bottom-0 w-[32%] z-[25] hidden lg:block"
-        onMouseEnter={() => setIsPanelHovered(true)}
-        onMouseLeave={() => setIsPanelHovered(false)}
-      />
-
-      {/* =================================================================== */}
-      {/* SKIP INTRO CONTROL — always at the top-most z-level (z-50)           */}
-      {/* =================================================================== */}
-      <div
-        className={`absolute top-6 right-6 z-50 transition-opacity duration-700 ${
+        className={`absolute top-6 right-6 z-50 pointer-events-auto transition-opacity duration-700 ${
           introStarted ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
       >
@@ -333,35 +334,31 @@ const CinematicVideoIntro: React.FC<CinematicVideoIntroProps> = ({
           type="button"
           onClick={dissolveAndComplete}
           aria-label="Skip cinematic introduction"
-          className="group flex items-center space-x-2 bg-brand-black/40 hover:bg-brand-black/70 backdrop-blur-sm border border-zinc-700/60 hover:border-brand-gold/60 text-zinc-400 hover:text-white px-4 py-2 rounded text-[9px] font-bold tracking-[0.25em] uppercase transition-all duration-300"
+          className="group flex items-center space-x-2 bg-brand-black/60 hover:bg-brand-black/90 backdrop-blur-md border border-zinc-700/80 hover:border-brand-gold text-zinc-300 hover:text-white px-4 py-2 rounded text-[9px] font-bold tracking-[0.25em] uppercase transition-all duration-300 shadow-xl cursor-pointer"
         >
           <span>SKIP INTRO</span>
           <X className="w-3 h-3 opacity-70 group-hover:opacity-100" />
         </button>
       </div>
 
-      {/* =================================================================== */}
-      {/* MOBILE PANEL HINT — tap-to-reveal pill (no hover on touch devices)   */}
-      {/* =================================================================== */}
+      {/* Mobile Discover Button */}
       <div
-        className={`absolute bottom-20 left-1/2 -translate-x-1/2 z-50 lg:hidden transition-opacity duration-700 ${
+        className={`absolute bottom-16 left-1/2 -translate-x-1/2 z-50 lg:hidden pointer-events-auto transition-opacity duration-700 ${
           introStarted ? "opacity-100" : "opacity-0 pointer-events-none"
         }`}
       >
         <button
           type="button"
           onClick={dissolveAndComplete}
-          className="bg-brand-black/50 backdrop-blur-sm border border-zinc-700/60 text-zinc-300 text-[9px] font-semibold tracking-[0.25em] uppercase px-5 py-2.5 rounded-full"
+          className="bg-brand-black/70 backdrop-blur-md border border-zinc-700 text-white text-[9px] font-semibold tracking-[0.25em] uppercase px-5 py-2.5 rounded-full shadow-xl cursor-pointer"
         >
-          VIEW PRODUCT DETAILS ↓
+          DISCOVER PIECE &darr;
         </button>
       </div>
 
-      {/* =================================================================== */}
-      {/* BUFFERING INDICATOR — spins only while pre-buffering is in progress   */}
-      {/* =================================================================== */}
+      {/* Buffering Indicator */}
       {!introStarted && (
-        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-50 flex items-center space-x-2 opacity-50">
+        <div className="absolute bottom-10 left-1/2 -translate-x-1/2 z-50 flex items-center space-x-2 opacity-60">
           <div className="w-4 h-4 border border-brand-gold border-t-transparent rounded-full animate-spin" />
           <span className="text-[9px] text-zinc-400 font-mono tracking-widest uppercase">
             LOADING EDITORIAL

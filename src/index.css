@@ -189,6 +189,18 @@ body {
   animation: heroProgress linear forwards;
 }
 
+@keyframes shimmerGold {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+.animate-shimmer-gold {
+  animation: shimmerGold 2.2s infinite ease-in-out;
+}
+
 /* GPU hardware acceleration helper */
 .gpu-accelerated {
   transform: translate3d(0, 0, 0);

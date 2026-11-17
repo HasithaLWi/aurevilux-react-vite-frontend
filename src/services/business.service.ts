@@ -13,6 +13,12 @@ export interface BusinessLookbook {
   galleryImages?: string[];
 }
 
+export interface ConciergeConfig {
+  activeProvider: "gemini" | "groq";
+  enabled: boolean;
+  welcomeMessage: string;
+}
+
 export interface BusinessInfo {
   _id?: string;
   name: string;
@@ -26,6 +32,7 @@ export interface BusinessInfo {
   termsAndConditions: string;
   privacyPolicy: string;
   lookbook: BusinessLookbook;
+  conciergeConfig?: ConciergeConfig;
   createdAt?: string;
   updatedAt?: string;
 }

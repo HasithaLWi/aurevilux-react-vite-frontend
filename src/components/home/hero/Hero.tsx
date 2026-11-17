@@ -26,7 +26,7 @@ const Hero: React.FC = () => {
       const modelImg = new Image();
       modelImg.src = slide.modelImage;
       if ("decode" in modelImg) {
-        modelImg.decode().catch(() => {});
+        modelImg.decode().catch(() => { });
       }
 
       // 3. Preload look card thumbnail
@@ -227,11 +227,10 @@ const Hero: React.FC = () => {
               alt={slide.line1}
               fetchPriority={idx === 0 ? "high" : "low"}
               loading={idx === 0 ? "eager" : "lazy"}
-              className={`absolute inset-0 w-full h-full object-cover object-center transition-all duration-1000 ease-out gpu-accelerated ${
-                isActive
+              className={`absolute inset-0 w-full h-full object-cover object-center transition-all duration-1000 ease-out gpu-accelerated ${isActive
                   ? "opacity-45 scale-100 z-10"
                   : "opacity-0 scale-105 z-0 pointer-events-none"
-              }`}
+                }`}
             />
           );
         })}
@@ -266,11 +265,10 @@ const Hero: React.FC = () => {
               alt={`${slide.line1} Model`}
               fetchPriority={idx === 0 ? "high" : "low"}
               loading={idx === 0 ? "eager" : "lazy"}
-              className={`absolute bottom-0 max-h-[820px] h-[68vh] sm:h-[75vh] md:h-[82vh] w-auto object-contain object-bottom drop-shadow-[0_25px_60px_rgba(0,0,0,0.95)] gpu-accelerated transition-all duration-700 ease-out ${
-                isActive
+              className={`absolute bottom-0 max-h-[820px] h-[68vh] sm:h-[75vh] md:h-[82vh] w-auto object-contain object-bottom drop-shadow-[0_25px_60px_rgba(0,0,0,0.95)] gpu-accelerated transition-all duration-700 ease-out ${isActive
                   ? "opacity-100 translate-y-0 scale-100 z-10"
                   : "opacity-0 translate-y-8 scale-95 z-0 pointer-events-none"
-              }`}
+                }`}
             />
           );
         })}
@@ -390,9 +388,6 @@ const Hero: React.FC = () => {
                   <span className="text-[9px] tracking-[0.25em] text-brand-gold font-bold uppercase">
                     {activeSlide.lookCard.tag}
                   </span>
-                  <span className="text-[10px] text-zinc-300 font-mono font-medium">
-                    {activeSlide.lookCard.price}
-                  </span>
                 </div>
 
                 <h4 className="font-serif text-xs text-white uppercase tracking-wider truncate group-hover:text-brand-gold transition-colors font-medium">
@@ -442,11 +437,10 @@ const Hero: React.FC = () => {
                 type="button"
                 onClick={() => goToSlide(idx)}
                 aria-label={`Jump to ${slide.line1}`}
-                className={`transition-all duration-300 rounded-full ${
-                  isActive
+                className={`transition-all duration-300 rounded-full ${isActive
                     ? "w-8 h-1.5 bg-brand-gold"
                     : "w-2 h-1.5 bg-zinc-800 hover:bg-zinc-600"
-                }`}
+                  }`}
               />
             );
           })}

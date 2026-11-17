@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import Hero from "./hero/Hero";
 import NewCollection from "./NewCollection";
 import FeaturedCategories from "./FeaturedCategories";
@@ -10,16 +10,41 @@ import Testimonials from "./Testimonials";
 import Newsletter from "./Newsletter";
 import { ScrollTrigger } from "../../animations";
 import { FloatingFeedbackPrompt } from "../common/FloatingFeedbackPrompt";
+import { preloadHomeImages } from "../../utils/preloadHomeImages";
+import { HomeSkeleton } from "./HomeSkeleton";
 
 const Home = () => {
+  const [showOverlay, setShowOverlay] = useState(true);
+  const [fadeOut, setFadeOut] = useState(false);
+
   useEffect(() => {
-    // Recalculate ScrollTrigger start points once dynamic images settle
+    let isMounted = true;
+
+    // Preload & GPU-decode all Hero and New Collection imagery
+    preloadHomeImages(4000).then(() => {
+      if (!isMounted) return;
+      setFadeOut(true);
+      setTimeout(() => {
+        if (isMounted) {
+          setShowOverlay(false);
+          ScrollTrigger.refresh();
+        }
+      }, 600);
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    // Recalculate ScrollTrigger start points once live components settle
     const refreshTriggers = () => {
       ScrollTrigger.refresh();
     };
 
     window.addEventListener("load", refreshTriggers);
-    const timer = setTimeout(refreshTriggers, 500);
+    const timer = setTimeout(refreshTriggers, 600);
 
     return () => {
       window.removeEventListener("load", refreshTriggers);
@@ -28,8 +53,18 @@ const Home = () => {
   }, []);
 
   return (
+    <div className="w-full flex flex-col items-center relative">
+      {/* Luxury Golden Shimmer Skeleton Overlay (Mounts on top; fades out gracefully without DOM shift) */}
+      {showOverlay && (
+        <div
+          className={`fixed inset-0 z-40 transition-opacity duration-600 ease-out pointer-events-none ${
+            fadeOut ? "opacity-0" : "opacity-100"
+          }`}
+        >
+          <HomeSkeleton />
+        </div>
+      )}
 
-    <div className="w-full flex flex-col items-center">
       {/* 1. Preserved Hero Campaign with interactive video */}
       <Hero />
 

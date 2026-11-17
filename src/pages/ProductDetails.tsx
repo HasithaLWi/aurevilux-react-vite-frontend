@@ -51,6 +51,7 @@ export default function ProductDetails() {
   // false = intro complete, show normal gallery
   const [introPlaying, setIntroPlaying] = useState<boolean | null>(null);
   const [editorialVideo, setEditorialVideo] = useState<EditorialVideoSource | null>(null);
+  const [isShoppingPanelHovered, setIsShoppingPanelHovered] = useState(false);
 
   // Review Form state
   const [reviewerName, setReviewerName] = useState("");
@@ -340,6 +341,8 @@ export default function ProductDetails() {
           <CinematicVideoIntro
             editorialVideo={editorialVideo}
             productName={product.name}
+            brand={product.brand}
+            price={product.price}
             onIntroComplete={handleIntroComplete}
           />
         )}
@@ -419,11 +422,20 @@ export default function ProductDetails() {
         {/* ========================================================================= */}
         {/* MAIN STAGE CANVAS: 70% LEFT GALLERY + 30% RIGHT SHOPPING CONTROLS         */}
         {/* ========================================================================= */}
-        <div className="relative z-10 w-full px-6 md:px-12 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center my-auto py-6">
+        <div
+          className={`relative w-full px-6 md:px-12 flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-center my-auto py-6 transition-all duration-300 ${
+            introPlaying && isShoppingPanelHovered ? "z-40" : "z-20"
+          }`}
+        >
           {/* ======================================================================= */}
           {/* LEFT COLUMN (70%): VERTICAL THUMBNAIL GALLERY + CENTERPIECE PRODUCT     */}
+          {/* Hidden during intro so pristine video & typography are front and center */}
           {/* ======================================================================= */}
-          <div className="lg:col-span-7 xl:col-span-8 relative flex flex-col justify-between h-full min-h-[500px] sm:min-h-[580px] lg:min-h-[660px]">
+          <div
+            className={`lg:col-span-7 xl:col-span-8 relative flex flex-col justify-between h-full min-h-[500px] sm:min-h-[580px] lg:min-h-[660px] transition-opacity duration-700 ${
+              introPlaying ? "opacity-0 pointer-events-none" : "opacity-100"
+            }`}
+          >
             {/* STAGE CONTAINER WITH FLOATING THUMBNAIL STRIP */}
             <div className="relative flex-1 flex items-center justify-center w-full">
               {/* VERTICAL THUMBNAIL STRIP (FAR LEFT) */}
@@ -533,12 +545,16 @@ export default function ProductDetails() {
 
           {/* ======================================================================= */}
           {/* RIGHT COLUMN (30%): LUXURY SHOPPING CONTROLS & INFORMATION PANEL        */}
-          {/* During intro: z-20 normally, z-40 when hovered (above foreground video)  */}
+          {/* During intro: z-20 normally (behind model), z-40 on hover (above model)  */}
           {/* ======================================================================= */}
           <div
-            className={`lg:col-span-5 xl:col-span-4 space-y-5 lg:space-y-6 lg:pl-4 transition-all duration-500 ${
+            onMouseEnter={() => setIsShoppingPanelHovered(true)}
+            onMouseLeave={() => setIsShoppingPanelHovered(false)}
+            className={`lg:col-span-5 xl:col-span-4 space-y-5 lg:space-y-6 lg:pl-4 transition-all duration-300 ${
               introPlaying
-                ? "relative z-20 hover:z-40"
+                ? isShoppingPanelHovered
+                  ? "relative z-40"
+                  : "relative z-20"
                 : "relative z-20"
             }`}
           >

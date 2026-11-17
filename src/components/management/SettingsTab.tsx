@@ -6,15 +6,22 @@ import {
   BookOpen,
   Upload,
   Loader2,
+  Sparkles,
+  CheckCircle2,
+  AlertCircle,
+  Cpu,
 } from "lucide-react";
 import { BusinessService, type BusinessInfo } from "../../services/business.service";
+import { ConciergeService, type ConciergeStatusResponse } from "../../services/concierge.service";
 import { UploadService } from "../../services/upload.service";
 import { validateImageFile, isSupabaseStorageUrl } from "../../utils/imageValidation";
 import { useLuxuryAlert } from "../../context/LuxuryAlertContext";
 
 export const SettingsTab: React.FC = () => {
   const { showAlert } = useLuxuryAlert();
-  const [activeSection, setActiveSection] = useState<"general" | "legal" | "lookbook">("general");
+  const [activeSection, setActiveSection] = useState<
+    "general" | "legal" | "lookbook" | "concierge"
+  >("general");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -52,6 +59,14 @@ export const SettingsTab: React.FC = () => {
   const [uploadingLeft, setUploadingLeft] = useState(false);
   const [uploadingRight, setUploadingRight] = useState(false);
 
+  // Form State: Éléanore AI Concierge Engine
+  const [conciergeActiveProvider, setConciergeActiveProvider] = useState<"gemini" | "groq">("gemini");
+  const [conciergeEnabled, setConciergeEnabled] = useState(true);
+  const [conciergeWelcomeMessage, setConciergeWelcomeMessage] = useState(
+    "Hello. I am Éléanore, your Aurevilux client advisor. How may I assist you today?"
+  );
+  const [conciergeStatus, setConciergeStatus] = useState<ConciergeStatusResponse | null>(null);
+
   useEffect(() => {
     async function loadSettings() {
       setLoading(true);
@@ -79,6 +94,29 @@ export const SettingsTab: React.FC = () => {
             setLookbookLeft(info.lookbook.leftImage || "/images/fashion_models/featured_categories_men.jpg");
             setLookbookRight(info.lookbook.rightImage || "/images/fashion_models/featured_categories_women.jpg");
           }
+
+          if (info.conciergeConfig) {
+            setConciergeActiveProvider(info.conciergeConfig.activeProvider || "gemini");
+            setConciergeEnabled(info.conciergeConfig.enabled ?? true);
+            if (info.conciergeConfig.welcomeMessage) {
+              setConciergeWelcomeMessage(info.conciergeConfig.welcomeMessage);
+            }
+          }
+        }
+
+        // Also fetch live concierge provider status from API
+        try {
+          const cStatus = await ConciergeService.getStatus();
+          setConciergeStatus(cStatus);
+          if (cStatus) {
+            setConciergeActiveProvider(cStatus.activeProvider || "gemini");
+            setConciergeEnabled(cStatus.enabled ?? true);
+            if (cStatus.welcomeMessage) {
+              setConciergeWelcomeMessage(cStatus.welcomeMessage);
+            }
+          }
+        } catch {
+          // ignore status check failure
         }
       } catch (err: any) {
         showAlert("error", "Failed to load atelier business configuration: " + (err.message || err));
@@ -177,10 +215,15 @@ export const SettingsTab: React.FC = () => {
           rightImage: lookbookRight,
           galleryImages: [],
         },
+        conciergeConfig: {
+          activeProvider: conciergeActiveProvider,
+          enabled: conciergeEnabled,
+          welcomeMessage: conciergeWelcomeMessage,
+        },
       };
 
       await BusinessService.updateBusinessInfo(payload);
-      showAlert("success", "Atelier parameters & Lookbook Studio saved successfully.");
+      showAlert("success", "Atelier parameters & Éléanore AI Concierge settings saved successfully.");
     } catch (err: any) {
       showAlert(
         "error",
@@ -262,6 +305,18 @@ export const SettingsTab: React.FC = () => {
         >
           <BookOpen className="w-3.5 h-3.5" />
           <span>Lookbook Studio</span>
+        </button>
+
+        <button
+          onClick={() => setActiveSection("concierge")}
+          className={`flex items-center gap-2 px-4 py-2 rounded text-xs uppercase tracking-wider font-semibold transition-colors ${
+            activeSection === "concierge"
+              ? "bg-brand-burgundy text-white font-bold"
+              : "text-zinc-400 hover:text-white hover:bg-zinc-900/60"
+          }`}
+        >
+          <Sparkles className="w-3.5 h-3.5 text-brand-gold" />
+          <span>Éléanore AI Concierge</span>
         </button>
       </div>
 
@@ -581,6 +636,228 @@ export const SettingsTab: React.FC = () => {
                     className="w-full bg-[#0a0a0c] border border-zinc-800 text-[10px] px-2.5 py-1.5 rounded text-zinc-400 font-mono outline-none focus:border-brand-gold"
                   />
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Section 4: Éléanore AI Concierge Engine */}
+        {activeSection === "concierge" && (
+          <div className="space-y-6 animate-fade-in text-left">
+            {/* Concierge Profile & Enable Switch */}
+            <div className="bg-[#101014] border border-zinc-900 rounded-lg p-6 space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-zinc-900 pb-5">
+                <div className="flex items-center gap-4">
+                  <div className="w-14 h-14 rounded-full p-1 bg-gradient-to-tr from-brand-gold/60 via-zinc-800 to-brand-gold/20 flex items-center justify-center shrink-0 shadow-lg shadow-black">
+                    <img
+                      src="/logo/eleanore-logo.png"
+                      alt="Éléanore Logo"
+                      onError={(e) => {
+                        // Fallback to original URL encoded path if alias is missing
+                        (e.target as HTMLImageElement).src =
+                          "/logo/Éléanore/Éléanore Luxury Assistant Logo.png";
+                      }}
+                      className="w-full h-full object-cover rounded-full"
+                    />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-serif text-lg text-white uppercase tracking-wider font-semibold">
+                        Éléanore
+                      </h3>
+                      <span className="text-[9px] bg-brand-gold/15 text-brand-gold px-2 py-0.5 rounded font-mono tracking-widest uppercase font-bold border border-brand-gold/30">
+                        Haute Concierge
+                      </span>
+                    </div>
+                    <p className="text-xs text-zinc-400 mt-0.5">
+                      Dedicated customer stylist & client advisor for the Aurevilux storefront.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Enable / Disable Storefront Switch */}
+                <div className="flex items-center gap-3 bg-[#0a0a0c] px-4 py-2.5 rounded-lg border border-zinc-800/80">
+                  <div className="text-right">
+                    <span className="text-[10px] text-zinc-300 font-bold uppercase tracking-wider block">
+                      Storefront Concierge
+                    </span>
+                    <span className="text-[9px] text-zinc-500 font-mono block">
+                      {conciergeEnabled ? "Active for Patrons" : "Resting (Offline)"}
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setConciergeEnabled(!conciergeEnabled)}
+                    className={`w-12 h-6 rounded-full transition-colors relative p-1 cursor-pointer ${
+                      conciergeEnabled ? "bg-emerald-600" : "bg-zinc-800"
+                    }`}
+                  >
+                    <div
+                      className={`w-4 h-4 rounded-full bg-white transition-transform ${
+                        conciergeEnabled ? "translate-x-6" : "translate-x-0"
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
+
+              {/* Provider Selection Engine */}
+              <div className="space-y-3">
+                <div>
+                  <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block mb-1">
+                    Select AI Inference Engine *
+                  </label>
+                  <p className="text-xs text-zinc-500">
+                    Choose which foundational intelligence powers Éléanore. Credentials & models are loaded from your backend <code className="text-zinc-300 font-mono text-[10px] bg-black px-1.5 py-0.5 rounded">.env</code> file.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+                  {/* Option 1: Google Gemini */}
+                  <div
+                    onClick={() => setConciergeActiveProvider("gemini")}
+                    className={`relative p-5 rounded-lg border transition-all cursor-pointer ${
+                      conciergeActiveProvider === "gemini"
+                        ? "bg-gradient-to-b from-brand-burgundy/25 to-[#131318] border-brand-gold/70 shadow-lg shadow-black"
+                        : "bg-[#0c0c0f] border-zinc-900 hover:border-zinc-800 opacity-75 hover:opacity-100"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/30 flex items-center justify-center text-blue-400">
+                          <Sparkles className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-semibold text-white tracking-wide">
+                            Google Gemini API
+                          </h4>
+                          <span className="text-[10px] text-zinc-400 font-mono">
+                            Model: {conciergeStatus?.providers?.gemini?.model || "gemini-2.5-flash"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div
+                        className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                          conciergeActiveProvider === "gemini"
+                            ? "border-brand-gold bg-brand-gold"
+                            : "border-zinc-700"
+                        }`}
+                      >
+                        {conciergeActiveProvider === "gemini" && (
+                          <div className="w-1.5 h-1.5 rounded-full bg-black" />
+                        )}
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-zinc-400 leading-relaxed mt-3">
+                      Deep context reasoning by Google DeepMind with high token efficiency and nuanced conversational understanding for couture garments.
+                    </p>
+
+                    <div className="mt-4 pt-3 border-t border-zinc-900/80 flex items-center justify-between text-[10px] font-mono">
+                      <span className="text-zinc-500 uppercase tracking-widest">Environment Key:</span>
+                      {conciergeStatus?.providers?.gemini?.configured ? (
+                        <span className="text-emerald-400 flex items-center gap-1 font-semibold">
+                          <CheckCircle2 className="w-3 h-3" /> Configured in .env
+                        </span>
+                      ) : (
+                        <span className="text-amber-400 flex items-center gap-1 font-semibold">
+                          <AlertCircle className="w-3 h-3" /> Set GEMINI_API_KEY
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Option 2: Groq LPU */}
+                  <div
+                    onClick={() => setConciergeActiveProvider("groq")}
+                    className={`relative p-5 rounded-lg border transition-all cursor-pointer ${
+                      conciergeActiveProvider === "groq"
+                        ? "bg-gradient-to-b from-brand-burgundy/25 to-[#131318] border-brand-gold/70 shadow-lg shadow-black"
+                        : "bg-[#0c0c0f] border-zinc-900 hover:border-zinc-800 opacity-75 hover:opacity-100"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-lg bg-orange-500/10 border border-orange-500/30 flex items-center justify-center text-orange-400">
+                          <Cpu className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-semibold text-white tracking-wide">
+                            Groq LPU Engine
+                          </h4>
+                          <span className="text-[10px] text-zinc-400 font-mono">
+                            Model: {conciergeStatus?.providers?.groq?.model || "llama-3.3-70b-versatile"}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div
+                        className={`w-4 h-4 rounded-full border flex items-center justify-center ${
+                          conciergeActiveProvider === "groq"
+                            ? "border-brand-gold bg-brand-gold"
+                            : "border-zinc-700"
+                        }`}
+                      >
+                        {conciergeActiveProvider === "groq" && (
+                          <div className="w-1.5 h-1.5 rounded-full bg-black" />
+                        )}
+                      </div>
+                    </div>
+
+                    <p className="text-xs text-zinc-400 leading-relaxed mt-3">
+                      Ultra-fast Language Processing Units (LPUs) offering near-instantaneous streaming speed and sharp open-weights intelligence.
+                    </p>
+
+                    <div className="mt-4 pt-3 border-t border-zinc-900/80 flex items-center justify-between text-[10px] font-mono">
+                      <span className="text-zinc-500 uppercase tracking-widest">Environment Key:</span>
+                      {conciergeStatus?.providers?.groq?.configured ? (
+                        <span className="text-emerald-400 flex items-center gap-1 font-semibold">
+                          <CheckCircle2 className="w-3 h-3" /> Configured in .env
+                        </span>
+                      ) : (
+                        <span className="text-amber-400 flex items-center gap-1 font-semibold">
+                          <AlertCircle className="w-3 h-3" /> Set GROQ_API_KEY
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Greeting Customization */}
+              <div className="space-y-2 pt-2 border-t border-zinc-900">
+                <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block">
+                  Initial Salon Greeting & Welcome Message
+                </label>
+                <textarea
+                  rows={2}
+                  value={conciergeWelcomeMessage}
+                  onChange={(e) => setConciergeWelcomeMessage(e.target.value)}
+                  className="w-full bg-[#0a0a0c] border border-zinc-800 rounded p-3 text-xs text-zinc-200 outline-none focus:border-brand-gold leading-relaxed"
+                  placeholder="Bonjour. I am Éléanore, your personal Aurevilux client advisor..."
+                />
+              </div>
+
+              {/* Active Protocols Summary */}
+              <div className="bg-[#0a0a0c] border border-zinc-900 rounded p-4 space-y-2 text-xs text-zinc-400">
+                <span className="text-[10px] uppercase font-bold text-brand-gold tracking-widest block">
+                  Active Guardrail Architecture
+                </span>
+                <ul className="list-disc pl-4 space-y-1 text-zinc-400 text-[11px] leading-relaxed">
+                  <li>
+                    <strong className="text-zinc-200">Strict 5-Turn Memory Window:</strong> The backend slices client inquiries to the last 5 turns (FIFO), preventing token bloat, hallucinations, and conversational drift.
+                  </li>
+                  <li>
+                    <strong className="text-zinc-200">Dynamic Live Catalog Injection:</strong> In-stock products, prices, categories, and delivery thresholds are retrieved from MongoDB for every prompt.
+                  </li>
+                  <li>
+                    <strong className="text-zinc-200">Zero Off-Topic Answers:</strong> Refuses inquiries outside Aurevilux, fashion styling, and atelier policies in a polite Parisian luxury tone.
+                  </li>
+                  <li>
+                    <strong className="text-zinc-200">Strict No-Fallback Policy:</strong> If the AI API encounters network disruption or missing keys, it returns a dignified salon notice without ever fabricating fake bot replies. Technical errors are logged to the console.
+                  </li>
+                </ul>
               </div>
             </div>
           </div>

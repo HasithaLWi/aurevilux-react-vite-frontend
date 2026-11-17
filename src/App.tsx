@@ -56,6 +56,8 @@ const ProtectedRoute: React.FC<{
   return <>{children}</>;
 };
 
+import { EleanoreConcierge } from "./components/chat/EleanoreConcierge";
+
 // Standard Storefront Layout with Luxury Header and Footer
 const StorefrontLayout = () => {
   return (
@@ -65,6 +67,8 @@ const StorefrontLayout = () => {
         <Outlet />
       </main>
       <Footer />
+      {/* Éléanore AI Concierge — Storefront Only (never rendered on /admin) */}
+      <EleanoreConcierge />
     </div>
   );
 };
