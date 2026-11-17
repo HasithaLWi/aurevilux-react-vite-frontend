@@ -74,6 +74,24 @@ export interface ProductReview {
   comment: string;
 }
 
+// ----------------------------------------------------------------------------
+// EDITORIAL VIDEO — Optional cinematic product introduction
+// Attach to any product to trigger the dual-layer video intro on page load.
+// If absent (null / undefined), the product gallery loads immediately.
+// ----------------------------------------------------------------------------
+export interface EditorialVideoSource {
+  /** Full-background original video (WebM or MP4) — displayed as the ambient backdrop */
+  backgroundVideo: string;
+  /** VP9 alpha transparent WebM — foreground model on Chrome / Edge / Firefox / Android */
+  transparentVideoWebm: string;
+  /** HEVC alpha transparent MP4 — foreground model on Safari / iOS / iPadOS (optional) */
+  transparentVideoHevc?: string;
+  /** High-res poster frame shown while both videos are pre-buffering */
+  poster?: string;
+  /** Override the auto-dissolve duration in seconds (default: 7) */
+  duration?: number;
+}
+
 export interface Product {
   id: string;
   _id?: string;
@@ -103,6 +121,8 @@ export interface Product {
   reviews: ProductReview[];
   createdAt?: string;
   updatedAt?: string;
+  /** Optional cinematic editorial video introduction — see EditorialVideoSource */
+  editorialVideo?: EditorialVideoSource | null;
 }
 
 export interface Brand {

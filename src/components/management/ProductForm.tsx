@@ -13,6 +13,7 @@ import {
   Layers,
   FileText,
   AlertCircle,
+  Film,
 } from "lucide-react";
 import type { Product, Brand, Category, ProductColor, ProductSpec } from "../../types";
 import { ProductService } from "../../services/product.service";
@@ -80,6 +81,23 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   const [isActive, setIsActive] = useState<boolean>(product?.isActive ?? true);
   const [isBestSeller, setIsBestSeller] = useState<boolean>(product?.isBestSeller ?? false);
   const [isNewArrival, setIsNewArrival] = useState<boolean>(product?.isNewArrival ?? true);
+
+  // Cinematic Editorial Video state (optional)
+  const [backgroundVideo, setBackgroundVideo] = useState(
+    product?.editorialVideo?.backgroundVideo || ""
+  );
+  const [transparentVideoWebm, setTransparentVideoWebm] = useState(
+    product?.editorialVideo?.transparentVideoWebm || ""
+  );
+  const [transparentVideoHevc, setTransparentVideoHevc] = useState(
+    product?.editorialVideo?.transparentVideoHevc || ""
+  );
+  const [videoPoster, setVideoPoster] = useState(
+    product?.editorialVideo?.poster || ""
+  );
+  const [videoDuration, setVideoDuration] = useState<number | string>(
+    product?.editorialVideo?.duration ?? 7
+  );
 
   // Color input state
   const [newColorName, setNewColorName] = useState("");
@@ -327,6 +345,17 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/(^-|-$)+/g, "");
 
+    const editorialVideoPayload =
+      backgroundVideo.trim() && transparentVideoWebm.trim()
+        ? {
+            backgroundVideo: backgroundVideo.trim(),
+            transparentVideoWebm: transparentVideoWebm.trim(),
+            transparentVideoHevc: transparentVideoHevc.trim() || undefined,
+            poster: videoPoster.trim() || undefined,
+            duration: Number(videoDuration) || 7,
+          }
+        : null;
+
     const payload: Partial<Product> = {
       name: name.trim(),
       slug: finalSlug,
@@ -348,6 +377,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       isActive,
       isBestSeller,
       isNewArrival,
+      editorialVideo: editorialVideoPayload,
     };
 
     setIsSaving(true);
@@ -812,6 +842,149 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                   </button>
                 </div>
               ))}
+            </div>
+          </div>
+
+          {/* Card 5: Cinematic Editorial Video Introduction (Optional) */}
+          <div className="bg-[#101014] border border-zinc-900 rounded-lg p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-zinc-900 pb-3">
+              <div className="flex items-center gap-2.5">
+                <Film className="w-4 h-4 text-brand-gold" />
+                <div>
+                  <h2 className="font-serif text-base uppercase text-white tracking-wider font-semibold">
+                    Cinematic Video Introduction (Optional)
+                  </h2>
+                  <span className="text-[10px] text-zinc-500 font-mono block">
+                    Two-layer synchronized luxury campaign opening (6–8 seconds)
+                  </span>
+                </div>
+              </div>
+              {(backgroundVideo || transparentVideoWebm) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBackgroundVideo("");
+                    setTransparentVideoWebm("");
+                    setTransparentVideoHevc("");
+                    setVideoPoster("");
+                    setVideoDuration(7);
+                  }}
+                  className="text-[10px] text-zinc-500 hover:text-red-400 uppercase tracking-wider font-mono flex items-center gap-1"
+                >
+                  <X className="w-3 h-3" />
+                  <span>Clear Video</span>
+                </button>
+              )}
+            </div>
+
+            <p className="text-xs text-zinc-400 font-light leading-relaxed">
+              When specified, a synchronized two-layer editorial video introduction plays on page load: the background video fills the screen, and the transparent model moves in the foreground. If left blank, the piece opens directly to the product gallery.
+            </p>
+
+            <div className="space-y-4 pt-1">
+              {/* Row 1: Background Video + Transparent Video WebM */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block mb-1.5">
+                    Background Video URL (WebM / MP4)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. /media/videos/gown-bg.webm"
+                    value={backgroundVideo}
+                    onChange={(e) => setBackgroundVideo(e.target.value)}
+                    className="w-full bg-[#0a0a0c] border border-zinc-800 text-xs px-3.5 py-2.5 rounded text-white font-mono outline-none focus:border-brand-gold"
+                  />
+                  <span className="text-[9px] text-zinc-500 mt-1 block">
+                    Original scene with background intact
+                  </span>
+                </div>
+
+                <div>
+                  <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block mb-1.5">
+                    Transparent Foreground Video (VP9 WebM with Alpha)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. /media/videos/gown-fg-vp9.webm"
+                    value={transparentVideoWebm}
+                    onChange={(e) => setTransparentVideoWebm(e.target.value)}
+                    className="w-full bg-[#0a0a0c] border border-zinc-800 text-xs px-3.5 py-2.5 rounded text-white font-mono outline-none focus:border-brand-gold"
+                  />
+                  <span className="text-[9px] text-zinc-500 mt-1 block">
+                    Same video with background removed (Chrome/Firefox/Edge)
+                  </span>
+                </div>
+              </div>
+
+              {/* Row 2: Safari HEVC + Poster Frame + Duration */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                  <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block mb-1.5">
+                    Safari HEVC Alpha (Optional MP4)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. /media/videos/gown-fg-hevc.mp4"
+                    value={transparentVideoHevc}
+                    onChange={(e) => setTransparentVideoHevc(e.target.value)}
+                    className="w-full bg-[#0a0a0c] border border-zinc-800 text-xs px-3.5 py-2.5 rounded text-white font-mono outline-none focus:border-brand-gold"
+                  />
+                  <span className="text-[9px] text-zinc-500 mt-1 block">
+                    Apple Safari / iOS transparent video
+                  </span>
+                </div>
+
+                <div>
+                  <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block mb-1.5">
+                    Poster Frame Preview URL (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. /images/products/gown-poster.webp"
+                    value={videoPoster}
+                    onChange={(e) => setVideoPoster(e.target.value)}
+                    className="w-full bg-[#0a0a0c] border border-zinc-800 text-xs px-3.5 py-2.5 rounded text-white font-mono outline-none focus:border-brand-gold"
+                  />
+                  <span className="text-[9px] text-zinc-500 mt-1 block">
+                    High-res preview while buffering
+                  </span>
+                </div>
+
+                <div>
+                  <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block mb-1.5">
+                    Intro Duration (Seconds)
+                  </label>
+                  <input
+                    type="number"
+                    min="3"
+                    max="15"
+                    step="0.5"
+                    value={videoDuration}
+                    onChange={(e) => setVideoDuration(e.target.value)}
+                    className="w-full bg-[#0a0a0c] border border-zinc-800 text-xs px-3.5 py-2.5 rounded text-brand-gold font-mono outline-none focus:border-brand-gold"
+                  />
+                  <span className="text-[9px] text-zinc-500 mt-1 block">
+                    Auto-dissolve timing (Default: 7s)
+                  </span>
+                </div>
+              </div>
+
+              {/* Status Badge */}
+              <div className="pt-2 border-t border-zinc-900 flex items-center justify-between text-[10px] font-mono">
+                <span className="text-zinc-500">
+                  Status:{" "}
+                  {backgroundVideo && transparentVideoWebm ? (
+                    <span className="text-emerald-400 font-semibold">
+                      &bull; Editorial Video Configured (Dual-Layer Active)
+                    </span>
+                  ) : (
+                    <span className="text-zinc-500">
+                      &bull; No Video (Standard Gallery Direct Load)
+                    </span>
+                  )}
+                </span>
+              </div>
             </div>
           </div>
         </div>

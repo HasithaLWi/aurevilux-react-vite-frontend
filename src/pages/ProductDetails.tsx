@@ -26,6 +26,8 @@ import { useApp } from "../context/AppContext";
 import { ProductService } from "../services/product.service";
 import { AuthService } from "../services/auth.service";
 import { useLuxuryAlert } from "../context/LuxuryAlertContext";
+import CinematicVideoIntro from "../components/product/CinematicVideoIntro";
+import type { EditorialVideoSource } from "../types";
 
 export default function ProductDetails() {
   const { id } = useParams<{ id: string }>();
@@ -42,6 +44,13 @@ export default function ProductDetails() {
   const [showSizeGuide, setShowSizeGuide] = useState<boolean>(false);
   const [relatedProductsList, setRelatedProductsList] = useState<Product[]>([]);
   const [isImgTransitioning, setIsImgTransitioning] = useState<boolean>(false);
+
+  // ── Cinematic intro state ────────────────────────────────────────────────────
+  // null  = not yet determined (product still loading)
+  // true  = intro is currently playing
+  // false = intro complete, show normal gallery
+  const [introPlaying, setIntroPlaying] = useState<boolean | null>(null);
+  const [editorialVideo, setEditorialVideo] = useState<EditorialVideoSource | null>(null);
 
   // Review Form state
   const [reviewerName, setReviewerName] = useState("");
@@ -63,6 +72,15 @@ export default function ProductDetails() {
           setActiveImgIndex(0);
           setSelectedColor(apiProduct.colors?.[0]?.name || "");
           setSelectedSize(apiProduct.sizes?.[0] || "");
+
+          // ── Detect and register editorial video from API data ────────────────
+          const ev = (apiProduct as any)?.editorialVideo as EditorialVideoSource | null | undefined;
+          if (ev?.backgroundVideo && ev?.transparentVideoWebm) {
+            setEditorialVideo(ev);
+            setIntroPlaying(true);   // start cinematic intro
+          } else {
+            setIntroPlaying(false);  // skip intro — go straight to gallery
+          }
 
           // Load related products from API
           try {
@@ -108,6 +126,15 @@ export default function ProductDetails() {
         setActiveImgIndex(0);
         setSelectedColor(foundProduct.colors?.[0]?.name || "");
         setSelectedSize(foundProduct.sizes?.[0] || "");
+
+        // ── Detect editorial video from local catalog fallback ───────────────
+        const ev = (foundProduct as any)?.editorialVideo as EditorialVideoSource | null | undefined;
+        if (ev?.backgroundVideo && ev?.transparentVideoWebm) {
+          setEditorialVideo(ev);
+          setIntroPlaying(true);
+        } else {
+          setIntroPlaying(false);
+        }
 
         const localRelated = fallbackProducts
           .filter((p) => p.category === foundProduct.category && p.id !== foundProduct.id)
@@ -182,6 +209,11 @@ export default function ProductDetails() {
       setIsImgTransitioning(false);
     }, 150);
   }, [activeImgIndex]);
+
+  // ── Cinematic intro completion handler ───────────────────────────────────────
+  const handleIntroComplete = useCallback(() => {
+    setIntroPlaying(false);
+  }, []);
 
   const handleNextImage = useCallback(() => {
     handleSelectImage((activeImgIndex + 1) % images.length);
@@ -299,6 +331,18 @@ export default function ProductDetails() {
       {/* 1. FULL-WIDTH HERO GALLERY STAGE (70% GALLERY / 30% SHOPPING PANEL)       */}
       {/* ========================================================================= */}
       <section className="relative w-full min-h-screen flex flex-col justify-between pt-24 md:pt-28 pb-8 overflow-hidden">
+
+        {/* ========================================================================= */}
+        {/* CINEMATIC VIDEO INTRO — mounts above the gallery; dissolves when done      */}
+        {/* Only rendered when product has an editorialVideo AND intro is still active  */}
+        {/* ========================================================================= */}
+        {introPlaying === true && editorialVideo && (
+          <CinematicVideoIntro
+            editorialVideo={editorialVideo}
+            productName={product.name}
+            onIntroComplete={handleIntroComplete}
+          />
+        )}
         {/* ========================================================================= */}
         {/* TECHNIQUE A: SYNCHRONIZED FULL-SCREEN BACKGROUND (USES SAME FRONT IMAGE)  */}
         {/* ========================================================================= */}
@@ -489,8 +533,15 @@ export default function ProductDetails() {
 
           {/* ======================================================================= */}
           {/* RIGHT COLUMN (30%): LUXURY SHOPPING CONTROLS & INFORMATION PANEL        */}
+          {/* During intro: z-20 normally, z-40 when hovered (above foreground video)  */}
           {/* ======================================================================= */}
-          <div className="lg:col-span-5 xl:col-span-4 space-y-5 lg:space-y-6 lg:pl-4">
+          <div
+            className={`lg:col-span-5 xl:col-span-4 space-y-5 lg:space-y-6 lg:pl-4 transition-all duration-500 ${
+              introPlaying
+                ? "relative z-20 hover:z-40"
+                : "relative z-20"
+            }`}
+          >
             {/* Brand Eyebrow */}
             <div className="space-y-1.5">
               <span className="text-[10px] md:text-xs tracking-[0.3em] text-brand-gold font-bold uppercase block">

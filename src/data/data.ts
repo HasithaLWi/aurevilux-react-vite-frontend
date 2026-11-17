@@ -31,6 +31,13 @@ export interface Product {
     date: string;
     comment: string;
   }[];
+  editorialVideo?: {
+    backgroundVideo: string;
+    transparentVideoWebm: string;
+    transparentVideoHevc?: string;
+    poster?: string;
+    duration?: number;
+  } | null;
 }
 
 export interface Brand {
