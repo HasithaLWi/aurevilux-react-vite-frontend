@@ -95,7 +95,7 @@ export const FloatingFeedbackPrompt: React.FC = () => {
 
   return (
     <div
-      className="fixed bottom-6 right-6 z-40 max-w-sm w-full animate-fade-in text-left select-none"
+      className="fixed bottom-6 left-6 z-40 max-w-sm w-full animate-fade-in text-left select-none"
       style={{ filter: "drop-shadow(0 20px 30px rgba(0,0,0,0.8))" }}
     >
       <div className="bg-[#0e0e12]/95 backdrop-blur-xl border border-brand-gold/30 rounded-xl p-5 shadow-2xl space-y-4 relative overflow-hidden transition-all duration-300">
@@ -151,11 +151,10 @@ export const FloatingFeedbackPrompt: React.FC = () => {
                   className="p-1 text-zinc-600 hover:text-brand-gold transition-colors"
                 >
                   <Star
-                    className={`w-5 h-5 ${
-                      (hoverRating || rating) >= star
-                        ? "fill-brand-gold text-brand-gold"
-                        : "text-zinc-700"
-                    }`}
+                    className={`w-5 h-5 ${(hoverRating || rating) >= star
+                      ? "fill-brand-gold text-brand-gold"
+                      : "text-zinc-700"
+                      }`}
                   />
                 </button>
               ))}
