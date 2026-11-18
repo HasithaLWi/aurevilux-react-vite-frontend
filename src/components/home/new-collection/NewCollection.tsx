@@ -313,13 +313,15 @@ const NewCollection: React.FC = () => {
         </div>
 
         {/* Centerpiece Hero Model Cutout (Signature Model Rise Illusion) */}
-        <div className="absolute inset-0 z-10 flex items-end justify-center pointer-events-none overflow-hidden">
-          <img
-            ref={modelRef}
-            src={activeScene.modelImage}
-            alt={`${activeScene.name} Model`}
-            className="absolute bottom-0 h-[72vh] sm:h-[78vh] md:h-[80vh] max-h-[820px] w-auto max-w-none object-contain object-bottom left-1/2 -translate-x-1/2 drop-shadow-[0_25px_60px_rgba(0,0,0,0.95)] gpu-accelerated"
-          />
+        <div className="absolute inset-0 z-10 pointer-events-none overflow-hidden">
+          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 flex items-end justify-center pointer-events-none">
+            <img
+              ref={modelRef}
+              src={activeScene.modelImage}
+              alt={`${activeScene.name} Model`}
+              className="h-[72vh] sm:h-[78vh] md:h-[80vh] max-h-[820px] w-auto max-w-none object-contain object-bottom drop-shadow-[0_25px_60px_rgba(0,0,0,0.95)] gpu-accelerated"
+            />
+          </div>
         </div>
 
         {/* Main Stage Grid (Left Editorial + Right Narrative) */}
