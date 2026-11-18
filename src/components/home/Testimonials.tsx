@@ -115,11 +115,10 @@ const Testimonials: React.FC = () => {
                   key={t.id}
                   data-reveal-testimonial-card
                   onClick={() => setActiveIndex(idx)}
-                  className={`group relative flex flex-col justify-between p-8 lg:p-10 rounded-sm bg-brand-dark/40 backdrop-blur-md border transition-[border-color,background-color,box-shadow,transform] duration-500 cursor-pointer ${
-                    isActive
-                      ? "border-brand-burgundy/60 shadow-[0_0_50px_-5px_rgba(109,26,42,0.4)] scale-102 bg-brand-dark/60 z-20"
-                      : "border-zinc-900/80 hover:border-zinc-800/80 hover:bg-brand-dark/50 z-10"
-                  }`}
+                  className={`group relative flex flex-col justify-between p-8 lg:p-10 rounded-sm bg-brand-dark/40 backdrop-blur-md border transition-[border-color,background-color,box-shadow,transform] duration-500 cursor-pointer ${isActive
+                    ? "border-brand-burgundy/60 shadow-[0_0_50px_-5px_rgba(109,26,42,0.4)] scale-102 bg-brand-dark/60 z-20"
+                    : "border-zinc-900/80 hover:border-zinc-800/80 hover:bg-brand-dark/50 z-10"
+                    }`}
                 >
 
                   <div className="space-y-6">
@@ -138,9 +137,9 @@ const Testimonials: React.FC = () => {
 
                   {/* Customer Information Footer */}
                   <div className="flex items-center space-x-4 pt-8 border-t border-zinc-900/80 mt-6">
-                    <div className="relative w-12 h-12 rounded-full overflow-hidden border border-zinc-700/60 bg-zinc-900 flex-shrink-0">
+                    {/* <div className="relative w-12 h-12 rounded-full overflow-hidden border border-zinc-700/60 bg-zinc-900 flex-shrink-0">
                       <img src={t.avatar} alt={t.name} className="w-full h-full object-cover" />
-                    </div>
+                    </div> */}
                     <div className="space-y-1">
                       <div className="flex items-center space-x-1.5">
                         <span className="text-xs font-semibold tracking-wider text-white uppercase">

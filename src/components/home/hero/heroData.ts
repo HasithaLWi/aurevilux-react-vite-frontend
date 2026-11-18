@@ -40,8 +40,10 @@ export const HERO_SLIDES: HeroSlideData[] = [
     ctaLink: "/shop?category=all",
     secondaryCtaText: "VIEW LOOKBOOK",
     secondaryCtaLink: "#lookbook",
-    backgroundImage: "/images/home/hero/hero_section_image-new.webp",
-    modelImage: "/images/home/hero/hero_section_image-new-rbg.png",
+    // backgroundImage: "/images/home/hero/hero_section_image-new.webp",
+    // modelImage: "/images/home/hero/hero_section_image-new-rbg.png",
+    backgroundImage: "https://wbhfhfklvertgdleofgh.supabase.co/storage/v1/object/public/ui/hero/hero_section_image.webp",
+    modelImage: "https://wbhfhfklvertgdleofgh.supabase.co/storage/v1/object/public/ui/hero/hero_section_image-new-rbg.png",
     lookCard: {
       tag: "ATELIER SELECTION",
       title: "VELVET LUNA WING GOWN",

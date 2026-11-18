@@ -15,6 +15,7 @@ import { OrdersTab } from "../components/management/OrdersTab";
 import { CouriersTab } from "../components/management/CouriersTab";
 import { CustomersTab } from "../components/management/CustomersTab";
 import { NewsletterTab } from "../components/management/NewsletterTab";
+import { ReportsTab } from "../components/management/ReportsTab";
 import { StaffManagementTab } from "../components/management/StaffManagementTab";
 import { RolesPermissionsTab } from "../components/management/RolesPermissionsTab";
 import { SettingsTab } from "../components/management/SettingsTab";
@@ -223,6 +224,7 @@ export default function Admin() {
     orders: true,
     customers: true,
     newsletter: isAdmin,
+    reports: isAdmin,
     staff: isAdmin,
     roles: isSuper,
     settings: isSuper,
@@ -408,6 +410,14 @@ export default function Admin() {
           <NewsletterTab
             subscribers={newsletterSubscribers}
             setSubscribers={setNewsletterSubscribers}
+          />
+        )}
+
+        {tabAccess[activeTab] && activeTab === "reports" && (
+          <ReportsTab
+            orders={ordersList}
+            products={productsList}
+            currentUser={currentUser}
           />
         )}
 

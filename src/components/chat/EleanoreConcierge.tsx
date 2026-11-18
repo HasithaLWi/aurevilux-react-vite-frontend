@@ -13,7 +13,7 @@ import {
   type ConciergeStatusResponse,
 } from "../../services/concierge.service";
 
-const LOGO_SRC = "/logo/eleanore-logo.png";
+const LOGO_SRC = "https://wbhfhfklvertgdleofgh.supabase.co/storage/v1/object/public/ui/hero/eleanore-logo.png";
 const LOGO_FALLBACK = "/logo/Éléanore/Éléanore Luxury Assistant Logo.png";
 
 const SUGGESTIONS = [

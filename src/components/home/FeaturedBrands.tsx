@@ -8,6 +8,7 @@ import { gsap, useGSAP, motionTokens } from "../../animations";
 export const FeaturedBrands: React.FC = () => {
   const sectionRef = useRef<HTMLElement>(null);
   const [brandsList, setBrandsList] = useState<any[]>(fallbackBrands);
+  const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     BrandService.getBrands()
@@ -114,19 +115,24 @@ export const FeaturedBrands: React.FC = () => {
                     </div>
 
                     {/* Logo Section */}
-                    <div className="flex-1 flex items-center justify-center w-full py-3">
-                      {brandLogo ? (
-                        <div className="w-20 h-14 flex items-center justify-center p-2 rounded bg-white/[0.04] border border-zinc-800 group-hover:border-zinc-600 transition-colors">
+                    <div className="flex-1 flex items-center justify-center w-full py-2">
+                      {brandLogo && !imageErrors[brandSlug] ? (
+                        <div className="w-full h-16 flex items-center justify-center px-3 py-2 rounded-lg bg-zinc-900/60 border border-zinc-800/80 group-hover:border-brand-gold/40 group-hover:bg-zinc-800/50 transition-all duration-300">
                           <img
                             src={brandLogo}
                             alt={brandName}
-                            className="max-h-10 max-w-full object-contain filter grayscale group-hover:grayscale-0 transition-all duration-300"
+                            className="max-h-9 max-w-[85%] object-contain filter brightness-0 invert opacity-80 group-hover:opacity-100 group-hover:scale-105 transition-all duration-300 drop-shadow-[0_2px_8px_rgba(255,255,255,0.08)]"
+                            onError={() => {
+                              setImageErrors((prev) => ({ ...prev, [brandSlug]: true }));
+                            }}
                           />
                         </div>
                       ) : (
-                        <span className="font-serif text-white text-xs uppercase font-semibold text-center tracking-wider">
-                          {brandName}
-                        </span>
+                        <div className="w-full h-16 flex items-center justify-center px-2 rounded-lg bg-zinc-900/60 border border-zinc-800/80 group-hover:border-brand-gold/40 transition-colors">
+                          <span className="font-serif text-white/90 group-hover:text-brand-gold text-xs uppercase font-semibold text-center tracking-widest px-2 transition-colors">
+                            {brandName}
+                          </span>
+                        </div>
                       )}
                     </div>
 

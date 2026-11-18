@@ -78,11 +78,11 @@ export default function BrandDetail() {
             <span>BRANDS DIRECTORY</span>
           </button>
 
-          <div className="bg-brand-black/80 px-4 py-2 border border-zinc-800 rounded w-fit mx-auto">
+          <div className="bg-brand-black/80 px-6 py-3 border border-zinc-800 rounded-lg w-fit mx-auto">
             <img
               src={brand.logo}
               alt={brand.name}
-              className="h-16 object-contain filter brightness-100"
+              className="h-14 object-contain filter brightness-0 invert opacity-90"
             />
           </div>
 

@@ -54,7 +54,7 @@ export default function Brands() {
               />
               {/* Brand Logo Floating Overlay */}
               <div className="absolute inset-0 bg-black/35 flex items-center justify-center p-6">
-                <div className="bg-brand-black/90 p-4 border border-zinc-800 max-w-[150px] max-h-[70px] flex items-center justify-center rounded">
+                <div className="bg-white/70 p-4 border border-zinc-800 max-w-[150px] max-h-[70px] flex items-center justify-center rounded">
                   <img
                     src={brand.logo}
                     alt={brand.name}

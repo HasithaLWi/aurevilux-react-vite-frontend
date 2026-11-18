@@ -16,6 +16,7 @@ import {
   Settings,
   ExternalLink,
   LogOut,
+  FileBarChart,
 } from "lucide-react";
 
 export type AdminTabId =
@@ -29,6 +30,7 @@ export type AdminTabId =
   | "orders"
   | "customers"
   | "newsletter"
+  | "reports"
   | "staff"
   | "roles"
   | "settings";
@@ -70,6 +72,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     orders: true,
     customers: true,
     newsletter: isAdmin,
+    reports: isAdmin,
     staff: isAdmin,
     roles: isSuper,
     settings: isSuper,
@@ -216,7 +219,27 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             </div>
           )}
 
-          {/* 6. STAFF & SETTINGS */}
+          {/* 6. EXECUTIVE REPORTS */}
+          {tabAccess.reports && (
+            <div className="space-y-1">
+              <span className="text-[9px] tracking-[0.25em] text-zinc-600 font-bold uppercase px-3 block">
+                MANAGEMENT & REPORTS
+              </span>
+              <button
+                onClick={() => setActiveTab("reports")}
+                className={`w-full flex items-center space-x-3 px-3 py-2 rounded transition-all text-left uppercase text-[11px] tracking-wider ${
+                  activeTab === "reports"
+                    ? "bg-brand-burgundy text-white font-bold"
+                    : "text-zinc-400 hover:text-white hover:bg-zinc-900/60"
+                }`}
+              >
+                <FileBarChart className="w-3.5 h-3.5 text-brand-gold" />
+                <span>REPORTS</span>
+              </button>
+            </div>
+          )}
+
+          {/* 7. STAFF & SETTINGS */}
           {[
             { id: "staff", label: "STAFF MANAGEMENT", icon: UserCog },
             { id: "roles", label: "ROLES & PERMISSIONS", icon: KeyRound },
