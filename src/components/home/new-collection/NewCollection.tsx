@@ -38,8 +38,8 @@ const NewCollection: React.FC = () => {
         modelRef.current,
         {
           opacity: 0.2,
-          y: 40,
-          scale: 0.95,
+          y: 35,
+          scale: 0.97,
           filter: "blur(4px)",
         },
         {
@@ -156,16 +156,16 @@ const NewCollection: React.FC = () => {
           modelRef.current,
           {
             opacity: 0,
-            y: 75,
-            scale: 0.92,
-            filter: "blur(8px)",
+            y: 50,
+            scale: 0.95,
+            filter: "blur(6px)",
           },
           {
             opacity: 1,
             y: 0,
             scale: 1,
             filter: "blur(0px)",
-            duration: 1.0,
+            duration: 0.9,
             ease: "power3.out",
             clearProps: "filter",
           },
@@ -280,7 +280,7 @@ const NewCollection: React.FC = () => {
     <div ref={triggerRef} className="relative w-full">
       <section
         ref={sectionRef}
-        className="relative w-full h-screen bg-brand-black overflow-hidden flex flex-col justify-between pt-24 pb-6 px-6 md:px-12 select-none"
+        className="relative w-full h-screen bg-brand-black overflow-hidden flex flex-col justify-between pt-20 sm:pt-24 pb-3 sm:pb-6 px-4 sm:px-6 md:px-12 select-none"
       >
         {/* Atmospheric Background Media with Crimson Ambient Glow */}
         <div
@@ -296,6 +296,8 @@ const NewCollection: React.FC = () => {
           {/* Luxury Gradient Masks */}
           <div className="absolute inset-0 bg-gradient-to-r from-brand-black via-brand-black/75 to-transparent md:w-[65%]" />
           <div className="absolute inset-0 bg-gradient-to-t from-brand-black via-transparent to-brand-black/40" />
+          {/* Soft Mobile Scrim Vignette: preserves editorial text legibility over couture garments */}
+          <div className="absolute inset-0 bg-gradient-to-b from-brand-black/75 via-transparent to-brand-black/85 lg:hidden z-10 pointer-events-none" />
 
           {/* Soft Glowing Ambient Lights */}
           <div className="absolute left-[15%] top-[25%] w-[450px] h-[450px] bg-brand-burgundy/30 blur-[130px] rounded-full" />
@@ -311,21 +313,21 @@ const NewCollection: React.FC = () => {
         </div>
 
         {/* Centerpiece Hero Model Cutout (Signature Model Rise Illusion) */}
-        <div className="absolute inset-0 z-10 flex items-end justify-center pointer-events-none">
+        <div className="absolute inset-0 z-10 flex items-end justify-center pointer-events-none overflow-hidden">
           <img
             ref={modelRef}
             src={activeScene.modelImage}
             alt={`${activeScene.name} Model`}
-            className="h-[72vh] md:h-[80vh] max-h-[780px] object-contain object-bottom drop-shadow-[0_25px_60px_rgba(0,0,0,0.95)] gpu-accelerated"
+            className="absolute bottom-0 h-[72vh] sm:h-[78vh] md:h-[80vh] max-h-[820px] w-auto max-w-none object-contain object-bottom left-1/2 -translate-x-1/2 drop-shadow-[0_25px_60px_rgba(0,0,0,0.95)] gpu-accelerated"
           />
         </div>
 
         {/* Main Stage Grid (Left Editorial + Right Narrative) */}
-        <div className="relative z-20 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        <div className="relative z-20 max-w-7xl mx-auto w-full grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
           {/* Left Column: Collection Information */}
           <div
             ref={leftContentRef}
-            className="lg:col-span-7 space-y-3 md:space-y-4"
+            className="lg:col-span-7 space-y-2.5 sm:space-y-3 md:space-y-4"
           >
             <div className="flex items-center space-x-2">
               <div className="w-6 h-[1px] bg-brand-burgundy" />
@@ -334,19 +336,19 @@ const NewCollection: React.FC = () => {
               </span>
             </div>
 
-            <h2 className="font-serif text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-white tracking-wide leading-[0.95] text-luxury-shadow">
+            <h2 className="font-serif text-3xl sm:text-5xl md:text-6xl lg:text-7xl text-white tracking-wide leading-[1.0] sm:leading-[0.95] text-luxury-shadow">
               {activeScene.line1} <br />
               <span className="text-zinc-100">{activeScene.line2}</span>
             </h2>
 
-            <p className="max-w-md text-xs md:text-sm text-zinc-300 font-light leading-relaxed">
+            <p className="max-w-xs sm:max-w-md text-xs md:text-sm text-zinc-300 font-light leading-relaxed">
               {activeScene.description}
             </p>
 
-            <div className="pt-2">
+            <div className="pt-1 sm:pt-2">
               <Link
                 to={activeScene.ctaLink}
-                className="btn-luxury inline-flex items-center space-x-2 bg-brand-burgundy hover:bg-brand-burgundyHover text-white px-7 py-3 rounded text-xs font-semibold tracking-[0.2em] transition-all shadow-lg shadow-brand-burgundy/30"
+                className="btn-luxury inline-flex items-center space-x-2 bg-brand-burgundy hover:bg-brand-burgundyHover text-white px-5 sm:px-7 py-2.5 sm:py-3 rounded text-[11px] sm:text-xs font-semibold tracking-[0.2em] transition-all shadow-lg shadow-brand-burgundy/30"
               >
                 <span>{activeScene.ctaText}</span>
                 <ArrowRight className="w-3.5 h-3.5" />
@@ -357,9 +359,9 @@ const NewCollection: React.FC = () => {
           {/* Right Column: Subtitle, Counter & Chevron Controls */}
           <div
             ref={rightContentRef}
-            className="lg:col-span-5 lg:justify-self-end flex flex-col items-start lg:items-end space-y-4 text-left lg:text-right"
+            className="lg:col-span-5 lg:justify-self-end flex flex-row lg:flex-col items-center lg:items-end justify-between sm:justify-start w-full sm:w-auto space-y-0 lg:space-y-4 text-left lg:text-right pt-0 sm:pt-1 lg:pt-0"
           >
-            <div className="border-l-2 lg:border-l-0 lg:border-r-2 border-brand-burgundy/60 pl-3 lg:pl-0 lg:pr-3 space-y-1">
+            <div className="hidden sm:block border-l-2 lg:border-l-0 lg:border-r-2 border-brand-burgundy/60 pl-3 lg:pl-0 lg:pr-3 space-y-1">
               <span className="block text-[9px] md:text-[10px] tracking-[0.3em] text-zinc-400 uppercase font-semibold">
                 {activeScene.seasonBadge}
               </span>
@@ -369,7 +371,7 @@ const NewCollection: React.FC = () => {
             </div>
 
             {/* Direct Navigation Chevrons + Number */}
-            <div className="flex items-center space-x-3 pt-1">
+            <div className="flex items-center space-x-3 pt-0 sm:pt-1">
               <span className="text-xs tracking-[0.25em] text-zinc-400 font-mono">
                 <span className="text-brand-gold font-bold">
                   {activeScene.number}
@@ -382,17 +384,17 @@ const NewCollection: React.FC = () => {
                   onClick={() => goToScene(activeIndex - 1)}
                   disabled={activeIndex === 0}
                   aria-label="Previous Collection"
-                  className="w-8 h-8 rounded-full border border-zinc-800 bg-brand-black/60 hover:border-brand-gold hover:text-brand-gold disabled:opacity-30 disabled:pointer-events-none transition-colors flex items-center justify-center text-zinc-300"
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-zinc-800 bg-brand-black/60 hover:border-brand-gold hover:text-brand-gold disabled:opacity-30 disabled:pointer-events-none transition-colors flex items-center justify-center text-zinc-300"
                 >
-                  <ChevronLeft className="w-4 h-4" />
+                  <ChevronLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </button>
                 <button
                   onClick={() => goToScene(activeIndex + 1)}
                   disabled={activeIndex === COLLECTION_SCENES.length - 1}
                   aria-label="Next Collection"
-                  className="w-8 h-8 rounded-full border border-zinc-800 bg-brand-black/60 hover:border-brand-gold hover:text-brand-gold disabled:opacity-30 disabled:pointer-events-none transition-colors flex items-center justify-center text-zinc-300"
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-full border border-zinc-800 bg-brand-black/60 hover:border-brand-gold hover:text-brand-gold disabled:opacity-30 disabled:pointer-events-none transition-colors flex items-center justify-center text-zinc-300"
                 >
-                  <ChevronRight className="w-4 h-4" />
+                  <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 </button>
               </div>
             </div>
@@ -404,10 +406,10 @@ const NewCollection: React.FC = () => {
         {/* Footer Indicators */}
         <div
           data-collection-footer
-          className="relative z-20 max-w-7xl mx-auto w-full flex flex-col gap-1 items-center justify-between text-zinc-500 text-[8px] md:text-[9px] tracking-[0.3em] uppercase pt-2"
+          className="relative z-20 max-w-7xl mx-auto w-full flex flex-col gap-1 items-center justify-between text-zinc-500 text-[8px] md:text-[9px] tracking-[0.3em] uppercase pt-1 sm:pt-2"
         >
-          <div className="relative z-20 max-w-7xl   w-3/4 mx-auto pt-4 opacity-50 hover:opacity-90 transition-opacity duration-200">
-            <div className="grid grid-cols-5 gap-2 sm:gap-3 md:gap-4 items-end">
+          <div className="relative z-20 max-w-7xl w-full sm:w-3/4 mx-auto pt-1 sm:pt-4 opacity-75 sm:opacity-50 hover:opacity-90 transition-opacity duration-200">
+            <div className="grid grid-cols-5 gap-1.5 sm:gap-3 md:gap-4 items-end">
               {COLLECTION_SCENES.map((scene, idx) => {
                 const isActive = idx === activeIndex;
                 return (
@@ -437,9 +439,9 @@ const NewCollection: React.FC = () => {
                     </div>
 
                     {/* Thumbnail Label Details */}
-                    <div className="p-1.5 sm:p-2 bg-zinc-950/90 backdrop-blur-sm space-y-0.5">
+                    <div className="p-1 sm:p-2 bg-zinc-950/90 backdrop-blur-sm space-y-0.5">
                       <span
-                        className={`block text-[8px] sm:text-[9px] tracking-[0.2em] font-mono ${
+                        className={`block text-[7px] sm:text-[9px] tracking-[0.2em] font-mono ${
                           isActive
                             ? "text-brand-gold font-bold"
                             : "text-zinc-500"
@@ -448,7 +450,7 @@ const NewCollection: React.FC = () => {
                         {scene.number}
                       </span>
                       <h4
-                        className={`text-[8px] sm:text-[9px] md:text-[10px] tracking-wider uppercase truncate font-medium ${
+                        className={`text-[7px] sm:text-[9px] md:text-[10px] tracking-wider uppercase truncate font-medium ${
                           isActive
                             ? "text-white"
                             : "text-zinc-400 group-hover:text-zinc-200"

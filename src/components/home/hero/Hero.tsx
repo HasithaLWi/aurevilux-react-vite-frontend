@@ -212,7 +212,7 @@ const Hero: React.FC = () => {
   return (
     <section
       ref={heroContainerRef}
-      className="relative w-full min-h-screen md:h-screen bg-brand-black overflow-hidden flex flex-col justify-between pt-24 md:pt-28 pb-8 px-6 md:px-12 select-none"
+      className="relative w-full min-h-screen md:h-screen bg-brand-black overflow-hidden flex flex-col justify-between pt-20 sm:pt-24 md:pt-28 pb-4 sm:pb-8 px-4 sm:px-6 md:px-12 select-none"
     >
       {/* ========================================================================= */}
       {/* 1. LAYER 1: ATMOSPHERIC BACKDROP MEDIA (DOM LAYER STACKED & GPU DECODED) */}
@@ -238,6 +238,8 @@ const Hero: React.FC = () => {
         {/* Cinematic Gradient Vignettes */}
         <div className="absolute inset-0 bg-gradient-to-r from-brand-black via-brand-black/85 to-transparent md:w-[65%] z-20 pointer-events-none" />
         <div className="absolute inset-0 bg-gradient-to-t from-brand-black via-transparent to-brand-black/40 z-20 pointer-events-none" />
+        {/* Soft Mobile Scrim Vignette: ensures typography & model blend seamlessly on small screens */}
+        <div className="absolute inset-0 bg-gradient-to-b from-brand-black/75 via-transparent to-brand-black/85 lg:hidden z-20 pointer-events-none" />
 
         {/* Soft Glowing Ambient Lights */}
         <div className="absolute left-[10%] top-[25%] w-[420px] h-[420px] bg-brand-burgundy/30 blur-[130px] rounded-full z-20 pointer-events-none" />
@@ -255,7 +257,7 @@ const Hero: React.FC = () => {
       {/* ========================================================================= */}
       {/* 2. LAYER 2: CENTERPIECE CUTOUT MODELS (DOM LAYER STACKED & GPU DECODED)   */}
       {/* ========================================================================= */}
-      <div className="absolute inset-0 z-10 flex items-center justify-end pointer-events-none pr-0 sm:pr-4 md:pr-10 lg:pr-16 xl:pr-24 overflow-hidden">
+      <div className="absolute inset-0 z-10 pointer-events-none pr-0 sm:pr-4 md:pr-10 lg:pr-16 xl:pr-24 overflow-hidden">
         {HERO_SLIDES.map((slide, idx) => {
           const isActive = idx === slideIndex;
           return (
@@ -265,9 +267,11 @@ const Hero: React.FC = () => {
               alt={`${slide.line1} Model`}
               fetchPriority={idx === 0 ? "high" : "low"}
               loading={idx === 0 ? "eager" : "lazy"}
-              className={`absolute bottom-0 max-h-[820px] h-[68vh] sm:h-[75vh] md:h-[82vh] w-auto object-contain object-bottom drop-shadow-[0_25px_60px_rgba(0,0,0,0.95)] gpu-accelerated transition-all duration-700 ease-out ${isActive
+              className={`absolute bottom-0 h-[68vh] sm:h-[75vh] md:h-[82vh] max-h-[850px] w-auto max-w-none object-contain object-bottom
+                left-1/2 -translate-x-[52%] lg:left-auto lg:right-0 lg:translate-x-0
+                drop-shadow-[0_25px_60px_rgba(0,0,0,0.95)] gpu-accelerated transition-all duration-700 ease-out ${isActive
                   ? "opacity-100 translate-y-0 scale-100 z-10"
-                  : "opacity-0 translate-y-8 scale-95 z-0 pointer-events-none"
+                  : "opacity-0 translate-y-6 scale-98 z-0 pointer-events-none"
                 }`}
             />
           );
@@ -281,7 +285,7 @@ const Hero: React.FC = () => {
         {/* Left Column: Collection Information */}
         <div
           ref={leftContentRef}
-          className="lg:col-span-8 xl:col-span-7 space-y-4 md:space-y-5"
+          className="lg:col-span-8 xl:col-span-7 space-y-3 sm:space-y-4 md:space-y-5"
         >
           {/* Eyebrow with gold/burgundy bar */}
           <div className="flex items-center space-x-2.5">
@@ -294,7 +298,7 @@ const Hero: React.FC = () => {
           {/* Letter-by-Letter Typewriter Display Headline */}
           <h1
             ref={titleRef}
-            className="font-serif text-6xl sm:text-7xl md:text-8xl text-white tracking-wide leading-[0.95] md:leading-[0.92] text-luxury-shadow select-none"
+            className="font-serif text-4xl sm:text-6xl md:text-7xl lg:text-8xl text-white tracking-wide leading-[1.0] sm:leading-[0.95] md:leading-[0.92] text-luxury-shadow select-none"
             aria-label={`${activeSlide.line1} ${activeSlide.line2}`}
           >
             {/* Line 1 Letters */}
@@ -333,7 +337,7 @@ const Hero: React.FC = () => {
           {/* Editorial Paragraph Description */}
           <p
             data-hero-copy
-            className="max-w-md text-xs sm:text-sm md:text-base text-zinc-300 font-light leading-relaxed"
+            className="max-w-xs sm:max-w-md text-xs sm:text-sm md:text-base text-zinc-300 font-light leading-relaxed"
           >
             {activeSlide.description}
           </p>
@@ -342,11 +346,11 @@ const Hero: React.FC = () => {
           <div
             onMouseEnter={handleCtaMouseEnter}
             onMouseLeave={handleCtaMouseLeave}
-            className="flex flex-wrap items-center gap-4 sm:gap-6 pt-2"
+            className="flex flex-wrap items-center gap-3 sm:gap-6 pt-1 sm:pt-2"
           >
             <Link
               to={activeSlide.ctaLink}
-              className="btn-luxury inline-flex items-center space-x-2 bg-brand-burgundy hover:bg-brand-burgundyHover text-white px-7 py-3.5 rounded text-xs font-semibold tracking-[0.2em] transition-all shadow-lg shadow-brand-burgundy/30"
+              className="btn-luxury inline-flex items-center space-x-2 bg-brand-burgundy hover:bg-brand-burgundyHover text-white px-5 sm:px-7 py-3 sm:py-3.5 rounded text-[11px] sm:text-xs font-semibold tracking-[0.2em] transition-all shadow-lg shadow-brand-burgundy/30"
             >
               <span>{activeSlide.ctaText}</span>
               <ArrowRight className="w-3.5 h-3.5" />
@@ -354,7 +358,7 @@ const Hero: React.FC = () => {
 
             <a
               href={activeSlide.secondaryCtaLink}
-              className="text-xs font-semibold tracking-[0.2em] border-b border-zinc-700 hover:border-brand-gold pb-1 transition-colors text-zinc-400 hover:text-white"
+              className="text-[11px] sm:text-xs font-semibold tracking-[0.2em] border-b border-zinc-700 hover:border-brand-gold pb-1 transition-colors text-zinc-400 hover:text-white"
             >
               {activeSlide.secondaryCtaText}
             </a>
@@ -413,7 +417,7 @@ const Hero: React.FC = () => {
       {/* ============================================================ */}
       <div
         data-hero-footer
-        className="relative z-20 max-w-7xl mx-auto w-full pt-4 flex flex-col sm:flex-row items-center justify-between text-zinc-500 text-[8px] md:text-[9px] tracking-[0.3em] uppercase gap-4"
+        className="relative z-20 max-w-7xl mx-auto w-full pt-2 sm:pt-4 flex flex-col sm:flex-row items-center justify-between text-zinc-500 text-[8px] md:text-[9px] tracking-[0.3em] uppercase gap-2 sm:gap-4"
       >
         {/* Left Indicator & Season Quote */}
         <div className="flex items-center space-x-3">
