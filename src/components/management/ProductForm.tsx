@@ -31,6 +31,96 @@ interface ProductFormProps {
   onCancel: () => void;
 }
 
+// Helper to robustly match a product's brand (ObjectId, name, slug, or brandDetails) to a brand in the reference list
+function resolveBrandId(prod: Product | null | undefined, brandList: Brand[]): string {
+  if (!brandList || brandList.length === 0) return "";
+  if (!prod) return brandList[0]?._id || brandList[0]?.id || "";
+
+  const raw = prod.brand;
+  const brandDetails = (prod as any).brandDetails;
+
+  // 1. Direct match on _id / id
+  const matchById = brandList.find(
+    (b) => (b._id && b._id === raw) || (b.id && b.id === raw)
+  );
+  if (matchById) return matchById._id || matchById.id || "";
+
+  // 2. Match brandDetails._id or id
+  if (brandDetails?._id || brandDetails?.id) {
+    const targetId = brandDetails._id || brandDetails.id;
+    const match = brandList.find((b) => b._id === targetId || b.id === targetId);
+    if (match) return match._id || match.id || "";
+  }
+
+  // 3. Match by name (case-insensitive, e.g. "Cartier", "Chanel", "Burberry", "Gucci")
+  const targetName = (
+    typeof raw === "string" ? raw : brandDetails?.name || ""
+  ).trim().toLowerCase();
+  if (targetName) {
+    const matchByName = brandList.find(
+      (b) => b.name?.trim().toLowerCase() === targetName
+    );
+    if (matchByName) return matchByName._id || matchByName.id || "";
+  }
+
+  // 4. Match by slug
+  const targetSlug = (brandDetails?.slug || "").trim().toLowerCase();
+  if (targetSlug) {
+    const matchBySlug = brandList.find(
+      (b) => b.slug?.trim().toLowerCase() === targetSlug
+    );
+    if (matchBySlug) return matchBySlug._id || matchBySlug.id || "";
+  }
+
+  return brandList[0]?._id || brandList[0]?.id || "";
+}
+
+// Helper to robustly match a product's category (ObjectId, slug, title, or categoryDetails) to a category in the reference list
+function resolveCategoryId(prod: Product | null | undefined, catList: Category[]): string {
+  if (!catList || catList.length === 0) return "";
+  if (!prod) return catList[0]?._id || catList[0]?.id || catList[0]?.slug || "";
+
+  const raw = prod.category;
+  const catDetails = (prod as any).categoryDetails;
+
+  // 1. Direct match on _id / id
+  const matchById = catList.find(
+    (c) => (c._id && c._id === raw) || (c.id && c.id === raw)
+  );
+  if (matchById) return matchById._id || matchById.id || matchById.slug || "";
+
+  // 2. Match categoryDetails._id or id
+  if (catDetails?._id || catDetails?.id) {
+    const targetId = catDetails._id || catDetails.id;
+    const match = catList.find((c) => c._id === targetId || c.id === targetId);
+    if (match) return match._id || match.id || match.slug || "";
+  }
+
+  // 3. Match by slug (e.g. "jewelry", "coats", "gowns", "dresses", "suits")
+  const targetSlug = (
+    typeof raw === "string" ? raw : catDetails?.slug || ""
+  ).trim().toLowerCase();
+  if (targetSlug) {
+    const matchBySlug = catList.find(
+      (c) => c.slug?.trim().toLowerCase() === targetSlug
+    );
+    if (matchBySlug) return matchBySlug._id || matchBySlug.id || matchBySlug.slug || "";
+  }
+
+  // 4. Match by title (e.g. "Jewelry", "Coats", "Gowns")
+  const targetTitle = (
+    catDetails?.title || (typeof raw === "string" ? raw : "")
+  ).trim().toLowerCase();
+  if (targetTitle) {
+    const matchByTitle = catList.find(
+      (c) => c.title?.trim().toLowerCase() === targetTitle
+    );
+    if (matchByTitle) return matchByTitle._id || matchByTitle.id || matchByTitle.slug || "";
+  }
+
+  return catList[0]?._id || catList[0]?.id || catList[0]?.slug || "";
+}
+
 export const ProductForm: React.FC<ProductFormProps> = ({
   product,
   onSave,
@@ -47,16 +137,18 @@ export const ProductForm: React.FC<ProductFormProps> = ({
   // Form Fields
   const [name, setName] = useState(product?.name || "");
   const [slug, setSlug] = useState(product?.slug || "");
-  const [selectedBrand, setSelectedBrand] = useState(product?.brand || "");
-  const [selectedCategory, setSelectedCategory] = useState(product?.category || "");
-  const [departments, setDepartments] = useState<string[]>(
-    Array.isArray(product?.department)
-      ? (product?.department as string[])
-      : product?.department
-      ? [product.department]
-      : ["WOMEN"]
-  );
-  const [subcategory, setSubcategory] = useState(product?.subcategory || "");
+  const [selectedBrand, setSelectedBrand] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [departments, setDepartments] = useState<string[]>(() => {
+    const dept = product?.department;
+    if (Array.isArray(dept) && dept.length > 0) {
+      return dept.map((d) => String(d).toUpperCase());
+    }
+    if (typeof dept === "string" && dept.trim()) {
+      return [dept.trim().toUpperCase()];
+    }
+    return ["WOMEN"];
+  });
   const [price, setPrice] = useState<number | string>(product?.price ?? 1200);
   const [stockCount, setStockCount] = useState<number | string>(product?.stockCount ?? 10);
   const [description, setDescription] = useState(product?.description || "");
@@ -129,14 +221,14 @@ export const ProductForm: React.FC<ProductFormProps> = ({
           BrandService.getBrands(true),
           CategoryService.getCategories(),
         ]);
-        setBrands(bList || []);
-        setCategories(cList || []);
+        const validBrands = bList || [];
+        const validCategories = cList || [];
+        setBrands(validBrands);
+        setCategories(validCategories);
 
-        // Pre-select defaults if creating new
-        if (!product) {
-          if (bList && bList.length > 0) setSelectedBrand(bList[0]._id || bList[0].id || bList[0].name);
-          if (cList && cList.length > 0) setSelectedCategory(cList[0]._id || cList[0].id || cList[0].slug || "");
-        }
+        // Resolve brand and category selection accurately
+        setSelectedBrand(resolveBrandId(product, validBrands));
+        setSelectedCategory(resolveCategoryId(product, validCategories));
       } catch (e) {
         console.warn("Failed to load reference brands or categories:", e);
       } finally {
@@ -144,6 +236,65 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       }
     }
     loadRefs();
+  }, [product]);
+
+  // Synchronize brand and category whenever references or product change
+  useEffect(() => {
+    if (brands.length > 0) {
+      setSelectedBrand(resolveBrandId(product, brands));
+    }
+  }, [product, brands]);
+
+  useEffect(() => {
+    if (categories.length > 0) {
+      setSelectedCategory(resolveCategoryId(product, categories));
+    }
+  }, [product, categories]);
+
+  // Synchronize all form fields if product prop changes
+  useEffect(() => {
+    if (product) {
+      setName(product.name || "");
+      setSlug(product.slug || "");
+      const dept = product.department;
+      if (Array.isArray(dept) && dept.length > 0) {
+        setDepartments(dept.map((d) => String(d).toUpperCase()));
+      } else if (typeof dept === "string" && dept.trim()) {
+        setDepartments([dept.trim().toUpperCase()]);
+      } else {
+        setDepartments(["WOMEN"]);
+      }
+      setPrice(product.price ?? 1200);
+      setStockCount(product.stockCount ?? 10);
+      setDescription(product.description || "");
+      setLongDescription(product.longDescription || "");
+      setImages(product.images || []);
+      setColors(product.colors || []);
+      setSizes(product.sizes || ["XS", "S", "M", "L"]);
+      if (product.sizeStock && product.sizeStock.length > 0) {
+        setSizeStock(product.sizeStock);
+      } else {
+        const defaultSizes = product.sizes || ["XS", "S", "M", "L"];
+        const baseQty = Math.max(1, Math.floor(Number(product.stockCount || 10) / (defaultSizes.length || 1)));
+        setSizeStock(defaultSizes.map((s) => ({ size: s, quantity: baseQty })));
+      }
+      setSpecifications(
+        product.specifications && product.specifications.length > 0
+          ? product.specifications
+          : [
+              { label: "Material", value: "100% Virgin Wool & Silk Lining" },
+              { label: "Craftsmanship", value: "Handcrafted in Florence Atelier" },
+            ]
+      );
+      setIsActive(product.isActive ?? true);
+      setIsBestSeller(product.isBestSeller ?? false);
+      setIsNewArrival(product.isNewArrival ?? true);
+      setBackgroundVideo(product.editorialVideo?.backgroundVideo || "");
+      setTransparentVideoWebm(product.editorialVideo?.transparentVideoWebm || "");
+      setTransparentVideoHevc(product.editorialVideo?.transparentVideoHevc || "");
+      setVideoPoster(product.editorialVideo?.poster || "");
+      setVideoDuration(product.editorialVideo?.duration ?? 7);
+    }
   }, [product]);
 
   // Auto-generate slug when name changes (if creating or slug not manually modified)
@@ -506,6 +657,14 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     });
   };
 
+  const handleStockCountChange = (val: string) => {
+    setStockCount(val);
+    const num = Number(val);
+    if (!isNaN(num) && num >= 0 && sizeStock.length === 1) {
+      setSizeStock([{ size: sizeStock[0].size, quantity: num }]);
+    }
+  };
+
   // Specifications management
   const handleAddSpec = () => {
     setSpecifications((prev) => [...prev, { label: "", value: "" }]);
@@ -555,11 +714,13 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       return;
     }
 
-    // Resolve category label
+    // Resolve category label & title
     const catObj = categories.find(
       (c) => c._id === selectedCategory || c.id === selectedCategory || c.slug === selectedCategory
     );
-    const catLabel = catObj?.title || departments.join(" / ") + (subcategory ? ` / ${subcategory}` : "");
+    const catTitle = catObj?.title || selectedCategory;
+    const primaryDept = departments[0] || "COUTURE";
+    const catLabel = `${primaryDept} / ${catTitle.toUpperCase()}`;
 
     const finalSlug = (slug || name)
       .toLowerCase()
@@ -589,8 +750,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       brand: selectedBrand,
       category: selectedCategory,
       categoryLabel: catLabel,
-      department: departments,
-      subcategory: subcategory.trim() || undefined,
+      department: departments.map((d) => String(d).toUpperCase()),
       price: numericPrice,
       stockCount: numericStock,
       inStock: numericStock > 0,
@@ -618,7 +778,24 @@ export const ProductForm: React.FC<ProductFormProps> = ({
         savedResult = await ProductService.createProduct(payload);
         showAlert("success", `Piece "${savedResult.name}" created and added to catalog.`);
       }
-      onSave(savedResult);
+
+      // Ensure returned product has populated brand name and category slug for immediate UI consistency
+      const brandObj = brands.find(
+        (b) => (b._id && b._id === selectedBrand) || (b.id && b.id === selectedBrand)
+      );
+      const enhancedResult: Product = {
+        ...savedResult,
+        brand: brandObj?.name || (savedResult as any).brand || selectedBrand,
+        brandDetails: brandObj
+          ? { _id: brandObj._id || brandObj.id, name: brandObj.name, slug: brandObj.slug || "" }
+          : (savedResult as any).brandDetails,
+        category: catObj?.slug || (savedResult as any).category || selectedCategory,
+        categoryDetails: catObj
+          ? { _id: catObj._id || catObj.id, title: catObj.title, slug: catObj.slug || "" }
+          : (savedResult as any).categoryDetails,
+        categoryLabel: catLabel,
+      };
+      onSave(enhancedResult);
     } catch (err: any) {
       console.error("Failed to save product:", err);
       const msg =
@@ -706,21 +883,22 @@ export const ProductForm: React.FC<ProductFormProps> = ({
             </div>
 
             <div className="space-y-4">
-              <div>
-                <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block mb-1.5">
-                  Piece Title *
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Sculpted Silk Organza Gown"
-                  value={name}
-                  onChange={(e) => handleNameChange(e.target.value)}
-                  className="w-full bg-[#0a0a0c] border border-zinc-800 text-sm px-3.5 py-2.5 rounded text-white outline-none focus:border-brand-gold font-medium"
-                />
-              </div>
-
+              {/* Row 1: Piece Title & URL Slug */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block mb-1.5">
+                    Piece Title *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Sculpted Silk Organza Gown"
+                    value={name}
+                    onChange={(e) => handleNameChange(e.target.value)}
+                    className="w-full bg-[#0a0a0c] border border-zinc-800 text-sm px-3.5 py-2.5 rounded text-white outline-none focus:border-brand-gold font-medium"
+                  />
+                </div>
+
                 <div>
                   <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block mb-1.5">
                     URL Slug
@@ -733,7 +911,10 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                     className="w-full bg-[#0a0a0c] border border-zinc-800 text-xs px-3.5 py-2.5 rounded text-zinc-300 font-mono outline-none focus:border-brand-gold"
                   />
                 </div>
+              </div>
 
+              {/* Row 2: Maison / Brand & Taxonomy Category */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block mb-1.5">
                     Maison / Brand *
@@ -755,9 +936,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                     )}
                   </select>
                 </div>
-              </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block mb-1.5">
                     Taxonomy Category *
@@ -779,21 +958,9 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                     )}
                   </select>
                 </div>
-
-                <div>
-                  <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block mb-1.5">
-                    Subcategory Silhouette
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Evening Wear, Bags, Horology"
-                    value={subcategory}
-                    onChange={(e) => setSubcategory(e.target.value)}
-                    className="w-full bg-[#0a0a0c] border border-zinc-800 text-xs px-3.5 py-2.5 rounded text-white outline-none focus:border-brand-gold"
-                  />
-                </div>
               </div>
 
+              {/* Row 3: Atelier Departments */}
               <div>
                 <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block mb-2">
                   Atelier Departments (Select all applicable)
@@ -904,6 +1071,12 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                   placeholder="Color Name (e.g. Obsidian Noir)"
                   value={newColorName}
                   onChange={(e) => setNewColorName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      handleAddColor();
+                    }
+                  }}
                   className="bg-[#0a0a0c] border border-zinc-800 text-xs px-3 py-2 rounded text-white outline-none focus:border-brand-gold flex-1"
                 />
                 <div className="flex items-center gap-2 bg-[#0a0a0c] border border-zinc-800 px-2 py-1 rounded">
@@ -969,6 +1142,13 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                     placeholder="Custom size..."
                     value={customSize}
                     onChange={(e) => setCustomSize(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleAddSize(customSize);
+                        setCustomSize("");
+                      }
+                    }}
                     className="bg-[#0a0a0c] border border-zinc-800 text-xs px-2.5 py-1 rounded text-white outline-none w-28 font-mono"
                   />
                   <button
@@ -1511,7 +1691,7 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                   min="0"
                   required
                   value={stockCount}
-                  onChange={(e) => setStockCount(e.target.value)}
+                  onChange={(e) => handleStockCountChange(e.target.value)}
                   className="w-full bg-[#0a0a0c] border border-zinc-800 text-sm px-3.5 py-2.5 rounded text-white font-mono outline-none focus:border-brand-gold"
                 />
                 <span className="text-[10px] text-zinc-500 mt-1 block">

@@ -111,6 +111,8 @@ export interface Product {
   sizes: string[];
   sizeStock?: Array<{ size: string; quantity: number }>;
   brand: string;
+  brandDetails?: { _id?: string; id?: string; name?: string; slug?: string; logo?: string };
+  categoryDetails?: { _id?: string; id?: string; title?: string; slug?: string; image?: string };
   inStock: boolean;
   stockCount?: number;
   isActive?: boolean;

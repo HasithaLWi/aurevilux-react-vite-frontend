@@ -344,7 +344,7 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
             <thead className="bg-zinc-900/60 text-zinc-500 uppercase text-[9px] tracking-widest font-semibold border-b border-zinc-900">
               <tr>
                 <th className="py-3 px-4">Piece</th>
-                <th className="py-3 px-4">Department / Subcat</th>
+                <th className="py-3 px-4">Department & Category</th>
                 <th className="py-3 px-4">Price</th>
                 <th className="py-3 px-4">Stock</th>
                 <th className="py-3 px-4">Store Visibility</th>
@@ -393,7 +393,7 @@ export const ProductsTab: React.FC<ProductsTabProps> = ({
                           {deptDisplay}
                         </span>
                         <span className="text-[9px] text-zinc-500 uppercase block">
-                          {p.subcategory || "Couture Piece"}
+                          {p.categoryLabel || (p as any).categoryDetails?.title || p.category || "Couture Piece"}
                         </span>
                       </td>
                       <td className="py-3 px-4 font-serif text-white font-medium">
