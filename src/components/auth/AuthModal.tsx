@@ -117,11 +117,10 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
                 setErrorMessage("");
                 setSuccessMessage("");
               }}
-              className={`flex-1 pb-3 text-xs tracking-[0.2em] font-semibold transition-colors ${
-                mode === "login"
+              className={`flex-1 pb-3 text-xs tracking-[0.2em] font-semibold transition-colors ${mode === "login"
                   ? "text-brand-gold border-b-2 border-brand-gold"
                   : "text-zinc-500 hover:text-zinc-300"
-              }`}
+                }`}
             >
               SIGN IN
             </button>
@@ -131,11 +130,10 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
                 setErrorMessage("");
                 setSuccessMessage("");
               }}
-              className={`flex-1 pb-3 text-xs tracking-[0.2em] font-semibold transition-colors ${
-                mode === "register"
+              className={`flex-1 pb-3 text-xs tracking-[0.2em] font-semibold transition-colors ${mode === "register"
                   ? "text-brand-gold border-b-2 border-brand-gold"
                   : "text-zinc-500 hover:text-zinc-300"
-              }`}
+                }`}
             >
               JOIN MEMBERSHIP
             </button>
@@ -294,13 +292,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onSuccess }) => 
               </button>
             </form>
           )}
-
-          {/* Test Hint */}
-          <div className="mt-6 pt-4 border-t border-zinc-900 text-center">
-            <p className="text-[9px] text-zinc-600 tracking-wider">
-              CONNECTS TO BACKEND AT <code className="text-brand-gold">http://localhost:5000/api/v1</code>
-            </p>
-          </div>
         </div>
       </div>
     </div>

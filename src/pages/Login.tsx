@@ -25,7 +25,7 @@ export default function Login({ initialTab }: LoginProps) {
 
   const [activeTab, setActiveTab] = useState<"signin" | "register">(
     initialTab ||
-      (location.pathname.includes("register") ? "register" : "signin"),
+    (location.pathname.includes("register") ? "register" : "signin"),
   );
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -83,7 +83,7 @@ export default function Login({ initialTab }: LoginProps) {
         .catch((err) => {
           setAuthError(
             err.response?.data?.message ||
-              "This staff invitation link is invalid or has expired.",
+            "This staff invitation link is invalid or has expired.",
           );
         });
     }
@@ -260,12 +260,12 @@ export default function Login({ initialTab }: LoginProps) {
       const res = await AuthService.forgotPassword(forgotEmail.trim());
       setForgotMessage(
         res.message ||
-          "Recovery transmission dispatched to your email via SMTP.",
+        "Recovery transmission dispatched to your email via SMTP.",
       );
     } catch (err: any) {
       setForgotMessage(
         err.response?.data?.message ||
-          "If the email is registered, instructions have been sent.",
+        "If the email is registered, instructions have been sent.",
       );
     } finally {
       setIsForgotLoading(false);
@@ -300,13 +300,10 @@ export default function Login({ initialTab }: LoginProps) {
             <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
             <div className="space-y-1">
               <span className="font-semibold uppercase tracking-wider text-red-300 block">
-                Aurevilux Backend Offline
+                Server is Offline
               </span>
               <p className="text-[11px] text-zinc-400 font-light leading-relaxed">
-                Cannot connect to API server on{" "}
-                <code className="text-zinc-200">http://localhost:5000</code>.
-                Please start the backend service to authenticate or create an
-                account.
+                Please try again later or contact the support team.
               </p>
             </div>
           </div>
@@ -407,11 +404,10 @@ export default function Login({ initialTab }: LoginProps) {
                   setActiveTab("signin");
                   setAuthError("");
                 }}
-                className={`flex-1 pb-3 text-xs tracking-widest uppercase font-bold text-center transition-colors ${
-                  activeTab === "signin"
+                className={`flex-1 pb-3 text-xs tracking-widest uppercase font-bold text-center transition-colors ${activeTab === "signin"
                     ? "text-brand-gold border-b-2 border-brand-gold"
                     : "text-zinc-500 hover:text-zinc-300"
-                }`}
+                  }`}
               >
                 Sign In
               </button>
@@ -421,11 +417,10 @@ export default function Login({ initialTab }: LoginProps) {
                   setActiveTab("register");
                   setAuthError("");
                 }}
-                className={`flex-1 pb-3 text-xs tracking-widest uppercase font-bold text-center transition-colors ${
-                  activeTab === "register"
+                className={`flex-1 pb-3 text-xs tracking-widest uppercase font-bold text-center transition-colors ${activeTab === "register"
                     ? "text-brand-gold border-b-2 border-brand-gold"
                     : "text-zinc-500 hover:text-zinc-300"
-                }`}
+                  }`}
               >
                 Create Account
               </button>

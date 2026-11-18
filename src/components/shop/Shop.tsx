@@ -135,7 +135,7 @@ const Shop: React.FC = () => {
       console.error("Aurevilux Boutique API Error:", err);
       setBackendOffline(true);
       setErrorMessage(
-        "Unable to connect to Aurevilux server on http://localhost:5000. Please ensure the backend server is running.",
+        "Unable to connect to Aurevilux server. Please try again later.",
       );
       setProductsList([]);
     } finally {
@@ -374,25 +374,25 @@ const Shop: React.FC = () => {
               <option value="">ALL CATEGORIES</option>
               {(categoriesList.length > 0
                 ? categoriesList.map((c) => ({
-                    id: c.slug || c.id || (c as any)._id,
-                    name: (
-                      c.title ||
-                      (c as any).name ||
-                      c.slug ||
-                      ""
-                    ).toUpperCase(),
-                  }))
+                  id: c.slug || c.id || (c as any)._id,
+                  name: (
+                    c.title ||
+                    (c as any).name ||
+                    c.slug ||
+                    ""
+                  ).toUpperCase(),
+                }))
                 : [
-                    { id: "bags", name: "BAGS" },
-                    { id: "shoes", name: "SHOES" },
-                    { id: "coats", name: "COATS" },
-                    { id: "watches", name: "WATCHES" },
-                    { id: "jewelry", name: "JEWELRY" },
-                    { id: "gowns", name: "GOWNS" },
-                    { id: "scarves", name: "SCARVES" },
-                    { id: "jackets", name: "JACKETS" },
-                    { id: "blazers", name: "BLAZERS" },
-                  ]
+                  { id: "bags", name: "BAGS" },
+                  { id: "shoes", name: "SHOES" },
+                  { id: "coats", name: "COATS" },
+                  { id: "watches", name: "WATCHES" },
+                  { id: "jewelry", name: "JEWELRY" },
+                  { id: "gowns", name: "GOWNS" },
+                  { id: "scarves", name: "SCARVES" },
+                  { id: "jackets", name: "JACKETS" },
+                  { id: "blazers", name: "BLAZERS" },
+                ]
               ).map((cat) => (
                 <option key={cat.id} value={cat.id}>
                   {cat.name}
@@ -416,13 +416,13 @@ const Shop: React.FC = () => {
               {(brandsList.length > 0
                 ? brandsList.map((b) => b.name)
                 : [
-                    "Calvin Klein",
-                    "Gucci",
-                    "Zara",
-                    "Nike",
-                    "Tommy Hilfiger",
-                    "Levi's",
-                  ]
+                  "Calvin Klein",
+                  "Gucci",
+                  "Zara",
+                  "Nike",
+                  "Tommy Hilfiger",
+                  "Levi's",
+                ]
               ).map((brandName) => (
                 <option key={brandName} value={brandName}>
                   {brandName.toUpperCase()}
@@ -450,11 +450,10 @@ const Shop: React.FC = () => {
           {/* 5. Filter Toggle Button (Default Hidden, Click to Expand detailed sidebar) */}
           <button
             onClick={() => setIsFilterSidebarOpen(!isFilterSidebarOpen)}
-            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wider transition-all ${
-              isFilterSidebarOpen
-                ? "bg-brand-gold text-black border border-brand-gold"
-                : "bg-[#16161b] text-zinc-300 border border-zinc-800 hover:border-zinc-700"
-            }`}
+            className={`flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wider transition-all ${isFilterSidebarOpen
+              ? "bg-brand-gold text-black border border-brand-gold"
+              : "bg-[#16161b] text-zinc-300 border border-zinc-800 hover:border-zinc-700"
+              }`}
             aria-label="Toggle Extended Filter Menu"
           >
             <SlidersHorizontal className="w-3 h-3" />
@@ -503,86 +502,86 @@ const Shop: React.FC = () => {
         priceRange !== "all" ||
         selectedSize ||
         searchTerm) && (
-        <div className="flex flex-wrap gap-2 items-center text-[10px] tracking-widest font-semibold pt-1">
-          <span className="text-zinc-500 mr-1 uppercase">ACTIVE:</span>
-          {isNewArrival && (
-            <span className="bg-[#111116] border border-brand-gold/40 text-brand-gold px-2.5 py-1 rounded flex items-center gap-1.5 uppercase">
-              <span>Collection: NEW ARRIVALS</span>
-              <button
-                onClick={() => {
-                  setIsNewArrival(false);
-                  const p = new URLSearchParams(searchParams);
-                  p.delete("isNewArrival");
-                  setSearchParams(p);
-                }}
-              >
-                <X className="w-3 h-3 text-brand-gold/60 hover:text-white" />
-              </button>
-            </span>
-          )}
-          {isBestSeller && (
-            <span className="bg-[#111116] border border-brand-gold/40 text-brand-gold px-2.5 py-1 rounded flex items-center gap-1.5 uppercase">
-              <span>Collection: BEST SELLERS</span>
-              <button
-                onClick={() => {
-                  setIsBestSeller(false);
-                  const p = new URLSearchParams(searchParams);
-                  p.delete("isBestSeller");
-                  setSearchParams(p);
-                }}
-              >
-                <X className="w-3 h-3 text-brand-gold/60 hover:text-white" />
-              </button>
-            </span>
-          )}
-          {selectedDepartment && (
-            <span className="bg-[#111116] border border-brand-gold/40 text-brand-gold px-2.5 py-1 rounded flex items-center gap-1.5 uppercase">
-              <span>Department: {selectedDepartment}</span>
-              <button onClick={() => setSelectedDepartment("")}>
-                <X className="w-3 h-3 text-brand-gold/60 hover:text-white" />
-              </button>
-            </span>
-          )}
-          {selectedCategory && (
-            <span className="bg-[#111116] border border-zinc-800 px-2.5 py-1 rounded flex items-center gap-1.5 uppercase text-zinc-300">
-              <span>Category: {selectedCategory}</span>
-              <button onClick={() => setSelectedCategory("")}>
-                <X className="w-3 h-3 text-zinc-500 hover:text-white" />
-              </button>
-            </span>
-          )}
-          {selectedBrand && (
-            <span className="bg-[#111116] border border-zinc-800 px-2.5 py-1 rounded flex items-center gap-1.5 uppercase text-zinc-300">
-              <span>Maison: {selectedBrand}</span>
-              <button onClick={() => setSelectedBrand("")}>
-                <X className="w-3 h-3 text-zinc-500 hover:text-white" />
-              </button>
-            </span>
-          )}
-          {priceRange !== "all" && (
-            <span className="bg-[#111116] border border-zinc-800 px-2.5 py-1 rounded flex items-center gap-1.5 uppercase text-zinc-300">
-              <span>Price: {priceRange}</span>
-              <button onClick={() => setPriceRange("all")}>
-                <X className="w-3 h-3 text-zinc-500 hover:text-white" />
-              </button>
-            </span>
-          )}
-          {selectedSize && (
-            <span className="bg-[#111116] border border-zinc-800 px-2.5 py-1 rounded flex items-center gap-1.5 uppercase text-zinc-300">
-              <span>Size: {selectedSize}</span>
-              <button onClick={() => setSelectedSize("")}>
-                <X className="w-3 h-3 text-zinc-500 hover:text-white" />
-              </button>
-            </span>
-          )}
-          <button
-            onClick={clearAllFilters}
-            className="text-brand-gold hover:text-white text-[9px] underline underline-offset-4 ml-1 uppercase font-bold"
-          >
-            RESET ALL
-          </button>
-        </div>
-      )}
+          <div className="flex flex-wrap gap-2 items-center text-[10px] tracking-widest font-semibold pt-1">
+            <span className="text-zinc-500 mr-1 uppercase">ACTIVE:</span>
+            {isNewArrival && (
+              <span className="bg-[#111116] border border-brand-gold/40 text-brand-gold px-2.5 py-1 rounded flex items-center gap-1.5 uppercase">
+                <span>Collection: NEW ARRIVALS</span>
+                <button
+                  onClick={() => {
+                    setIsNewArrival(false);
+                    const p = new URLSearchParams(searchParams);
+                    p.delete("isNewArrival");
+                    setSearchParams(p);
+                  }}
+                >
+                  <X className="w-3 h-3 text-brand-gold/60 hover:text-white" />
+                </button>
+              </span>
+            )}
+            {isBestSeller && (
+              <span className="bg-[#111116] border border-brand-gold/40 text-brand-gold px-2.5 py-1 rounded flex items-center gap-1.5 uppercase">
+                <span>Collection: BEST SELLERS</span>
+                <button
+                  onClick={() => {
+                    setIsBestSeller(false);
+                    const p = new URLSearchParams(searchParams);
+                    p.delete("isBestSeller");
+                    setSearchParams(p);
+                  }}
+                >
+                  <X className="w-3 h-3 text-brand-gold/60 hover:text-white" />
+                </button>
+              </span>
+            )}
+            {selectedDepartment && (
+              <span className="bg-[#111116] border border-brand-gold/40 text-brand-gold px-2.5 py-1 rounded flex items-center gap-1.5 uppercase">
+                <span>Department: {selectedDepartment}</span>
+                <button onClick={() => setSelectedDepartment("")}>
+                  <X className="w-3 h-3 text-brand-gold/60 hover:text-white" />
+                </button>
+              </span>
+            )}
+            {selectedCategory && (
+              <span className="bg-[#111116] border border-zinc-800 px-2.5 py-1 rounded flex items-center gap-1.5 uppercase text-zinc-300">
+                <span>Category: {selectedCategory}</span>
+                <button onClick={() => setSelectedCategory("")}>
+                  <X className="w-3 h-3 text-zinc-500 hover:text-white" />
+                </button>
+              </span>
+            )}
+            {selectedBrand && (
+              <span className="bg-[#111116] border border-zinc-800 px-2.5 py-1 rounded flex items-center gap-1.5 uppercase text-zinc-300">
+                <span>Maison: {selectedBrand}</span>
+                <button onClick={() => setSelectedBrand("")}>
+                  <X className="w-3 h-3 text-zinc-500 hover:text-white" />
+                </button>
+              </span>
+            )}
+            {priceRange !== "all" && (
+              <span className="bg-[#111116] border border-zinc-800 px-2.5 py-1 rounded flex items-center gap-1.5 uppercase text-zinc-300">
+                <span>Price: {priceRange}</span>
+                <button onClick={() => setPriceRange("all")}>
+                  <X className="w-3 h-3 text-zinc-500 hover:text-white" />
+                </button>
+              </span>
+            )}
+            {selectedSize && (
+              <span className="bg-[#111116] border border-zinc-800 px-2.5 py-1 rounded flex items-center gap-1.5 uppercase text-zinc-300">
+                <span>Size: {selectedSize}</span>
+                <button onClick={() => setSelectedSize("")}>
+                  <X className="w-3 h-3 text-zinc-500 hover:text-white" />
+                </button>
+              </span>
+            )}
+            <button
+              onClick={clearAllFilters}
+              className="text-brand-gold hover:text-white text-[9px] underline underline-offset-4 ml-1 uppercase font-bold"
+            >
+              RESET ALL
+            </button>
+          </div>
+        )}
 
       {/* Backend Offline Notice */}
       {backendOffline && (
@@ -596,7 +595,7 @@ const Shop: React.FC = () => {
             </h3>
             <p className="text-xs text-zinc-400 font-light leading-relaxed max-w-md mx-auto">
               {errorMessage ||
-                "Unable to establish connection to Aurevilux server on http://localhost:5000."}
+                "Unable to establish connection to Aurevilux server."}
             </p>
           </div>
           <div className="pt-2">
@@ -645,11 +644,10 @@ const Shop: React.FC = () => {
                         onClick={() =>
                           setSelectedSize(selectedSize === s ? "" : s)
                         }
-                        className={`text-xs px-2.5 py-1 rounded border transition-colors ${
-                          selectedSize === s
-                            ? "border-brand-gold text-brand-gold bg-brand-gold/10 font-bold"
-                            : "border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700"
-                        }`}
+                        className={`text-xs px-2.5 py-1 rounded border transition-colors ${selectedSize === s
+                          ? "border-brand-gold text-brand-gold bg-brand-gold/10 font-bold"
+                          : "border-zinc-800 text-zinc-400 hover:text-white hover:border-zinc-700"
+                          }`}
                       >
                         {s}
                       </button>
@@ -673,11 +671,10 @@ const Shop: React.FC = () => {
                     <button
                       key={p.value}
                       onClick={() => setPriceRange(p.value)}
-                      className={`text-left py-1 px-2 rounded text-xs transition-colors flex items-center justify-between ${
-                        priceRange === p.value
-                          ? "bg-brand-gold/10 text-brand-gold font-bold"
-                          : "text-zinc-400 hover:text-white"
-                      }`}
+                      className={`text-left py-1 px-2 rounded text-xs transition-colors flex items-center justify-between ${priceRange === p.value
+                        ? "bg-brand-gold/10 text-brand-gold font-bold"
+                        : "text-zinc-400 hover:text-white"
+                        }`}
                     >
                       <span>{p.label}</span>
                       {priceRange === p.value && (
@@ -704,11 +701,10 @@ const Shop: React.FC = () => {
             {/* 1. LUXURY GOLDEN SHIMMER SKELETON LOADING (No plain spinner!) */}
             {isLoading ? (
               <div
-                className={`grid grid-cols-2 md:grid-cols-3 ${
-                  isFilterSidebarOpen
-                    ? "xl:grid-cols-4"
-                    : "xl:grid-cols-4 2xl:grid-cols-5"
-                } gap-5 w-full`}
+                className={`grid grid-cols-2 md:grid-cols-3 ${isFilterSidebarOpen
+                  ? "xl:grid-cols-4"
+                  : "xl:grid-cols-4 2xl:grid-cols-5"
+                  } gap-5 w-full`}
               >
                 {Array.from({ length: 8 }).map((_, index) => (
                   <div
@@ -755,11 +751,10 @@ const Shop: React.FC = () => {
             ) : (
               /* 2. REAL COUTURE PRODUCTS GRID (Full width responsive layout) */
               <div
-                className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 ${
-                  isFilterSidebarOpen
-                    ? "xl:grid-cols-4"
-                    : "xl:grid-cols-4 2xl:grid-cols-5"
-                } gap-5 w-full`}
+                className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 ${isFilterSidebarOpen
+                  ? "xl:grid-cols-4"
+                  : "xl:grid-cols-4 2xl:grid-cols-5"
+                  } gap-5 w-full`}
               >
                 {displayedProducts.map((product) => {
                   const productId = product.id || (product as any)._id;
@@ -790,9 +785,8 @@ const Shop: React.FC = () => {
                           aria-label="Toggle wishlist"
                         >
                           <Heart
-                            className={`w-3.5 h-3.5 ${
-                              isWishlisted ? "text-red-500 fill-red-500" : ""
-                            }`}
+                            className={`w-3.5 h-3.5 ${isWishlisted ? "text-red-500 fill-red-500" : ""
+                              }`}
                           />
                         </button>
                         {product.isNewArrival && (
@@ -887,11 +881,10 @@ const Shop: React.FC = () => {
                     <button
                       key={`page-${p}`}
                       onClick={() => handlePageChange(p)}
-                      className={`min-w-8 h-8 px-2 text-xs rounded-lg font-semibold tracking-wider transition-colors ${
-                        p === pagination.page
-                          ? "bg-brand-gold text-black font-bold shadow-lg shadow-brand-gold/20"
-                          : "border border-zinc-900 text-zinc-400 hover:text-white hover:border-zinc-700 bg-[#0e0e12]"
-                      }`}
+                      className={`min-w-8 h-8 px-2 text-xs rounded-lg font-semibold tracking-wider transition-colors ${p === pagination.page
+                        ? "bg-brand-gold text-black font-bold shadow-lg shadow-brand-gold/20"
+                        : "border border-zinc-900 text-zinc-400 hover:text-white hover:border-zinc-700 bg-[#0e0e12]"
+                        }`}
                     >
                       {p}
                     </button>

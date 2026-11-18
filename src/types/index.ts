@@ -81,9 +81,9 @@ export interface ProductReview {
 // ----------------------------------------------------------------------------
 export interface EditorialVideoSource {
   /** Full-background original video (WebM or MP4) — displayed as the ambient backdrop */
-  backgroundVideo: string;
+  backgroundVideo?: string;
   /** VP9 alpha transparent WebM — foreground model on Chrome / Edge / Firefox / Android */
-  transparentVideoWebm: string;
+  transparentVideoWebm?: string;
   /** HEVC alpha transparent MP4 — foreground model on Safari / iOS / iPadOS (optional) */
   transparentVideoHevc?: string;
   /** High-res poster frame shown while both videos are pre-buffering */

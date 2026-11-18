@@ -292,12 +292,12 @@ export const EleanoreConcierge: React.FC = () => {
             type="button"
             onClick={handleOpenChat}
             aria-label="Open Éléanore Luxury Concierge"
-            className="group relative flex items-center justify-center w-14 h-14 rounded-full bg-gradient-to-tr from-brand-black via-[#16161c] to-brand-black border border-brand-gold/60 hover:border-brand-gold shadow-[0_10px_30px_rgba(0,0,0,0.85)] hover:shadow-brand-gold/20 hover:scale-105 transition-all duration-300 cursor-pointer"
+            className="group relative flex items-center justify-center w-17 h-17 rounded-full bg-gradient-to-tr from-brand-black via-[#16161c] to-brand-black border border-brand-gold/60 hover:border-brand-gold shadow-[0_10px_30px_rgba(0,0,0,0.85)] hover:shadow-brand-gold/20 hover:scale-105 transition-all duration-300 cursor-pointer"
           >
             {/* Glowing gold ambient ring */}
             <div className="absolute inset-0 rounded-full bg-brand-gold/10 group-hover:bg-brand-gold/20 blur-sm transition-all" />
 
-            <div className="relative w-11 h-11 rounded-full overflow-hidden p-0.5 bg-gradient-to-tr from-brand-gold/80 to-brand-gold/20">
+            <div className="relative w-14 h-14 rounded-full overflow-hidden p-0.5 bg-gradient-to-tr from-brand-gold/80 to-brand-gold/20">
               <img
                 src={LOGO_SRC}
                 alt="Éléanore"
@@ -309,7 +309,7 @@ export const EleanoreConcierge: React.FC = () => {
             </div>
 
             {/* Online Green Pulsing Indicator */}
-            <span className="absolute top-0 right-0 flex h-3 w-3">
+            <span className="absolute top-0 right-1 flex h-3 w-3">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
               <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500 ring-2 ring-black" />
             </span>
@@ -388,9 +388,8 @@ export const EleanoreConcierge: React.FC = () => {
               return (
                 <div
                   key={idx}
-                  className={`flex gap-3 ${
-                    isAssistant ? "justify-start" : "justify-end"
-                  }`}
+                  className={`flex gap-3 ${isAssistant ? "justify-start" : "justify-end"
+                    }`}
                 >
                   {isAssistant && (
                     <div className="w-7 h-7 rounded-full overflow-hidden p-0.5 bg-brand-gold/30 shrink-0 mt-1">
@@ -406,11 +405,10 @@ export const EleanoreConcierge: React.FC = () => {
                   )}
 
                   <div
-                    className={`max-w-[85%] rounded-2xl px-4 py-3 text-xs leading-relaxed ${
-                      isAssistant
-                        ? "bg-[#141419] border border-zinc-800/90 text-zinc-200 shadow-md"
-                        : "bg-brand-burgundy/80 text-white border border-brand-burgundyHover shadow-md"
-                    }`}
+                    className={`max-w-[85%] rounded-2xl px-4 py-3 text-xs leading-relaxed ${isAssistant
+                      ? "bg-[#141419] border border-zinc-800/90 text-zinc-200 shadow-md"
+                      : "bg-brand-burgundy/80 text-white border border-brand-burgundyHover shadow-md"
+                      }`}
                   >
                     <FormattedMessage content={msg.content} isAssistant={isAssistant} />
                   </div>

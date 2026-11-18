@@ -32,8 +32,8 @@ export interface Product {
     comment: string;
   }[];
   editorialVideo?: {
-    backgroundVideo: string;
-    transparentVideoWebm: string;
+    backgroundVideo?: string;
+    transparentVideoWebm?: string;
     transparentVideoHevc?: string;
     poster?: string;
     duration?: number;

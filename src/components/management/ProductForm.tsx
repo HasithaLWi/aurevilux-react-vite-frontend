@@ -14,6 +14,8 @@ import {
   FileText,
   AlertCircle,
   Film,
+  Eye,
+  CheckCircle2,
 } from "lucide-react";
 import type { Product, Brand, Category, ProductColor, ProductSpec } from "../../types";
 import { ProductService } from "../../services/product.service";
@@ -108,6 +110,14 @@ export const ProductForm: React.FC<ProductFormProps> = ({
 
   // Upload state
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadingVideoField, setUploadingVideoField] = useState<
+    "backgroundVideo" | "transparentVideoWebm" | "transparentVideoHevc" | "poster" | null
+  >(null);
+  const [previewMedia, setPreviewMedia] = useState<{
+    url: string;
+    title: string;
+    isVideo: boolean;
+  } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -242,6 +252,217 @@ export const ProductForm: React.FC<ProductFormProps> = ({
     showAlert("info", "Piece photo removed and purged from Supabase Storage.");
   };
 
+  // ─── Handle Supabase Video Upload (Bucket: aurevilux-videos) ───────────────────
+  // 1. Checks if video already in Supabase; if so, purges previous video from storage.
+  // 2. Uploads new video to Supabase Storage bucket.
+  // 3. Immediately saves link to database if editing existing piece.
+  const handleVideoUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    field: "backgroundVideo" | "transparentVideoWebm" | "transparentVideoHevc" | "poster"
+  ) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const file = e.target.files[0];
+
+    let previousUrl = "";
+    if (field === "backgroundVideo") previousUrl = backgroundVideo;
+    else if (field === "transparentVideoWebm") previousUrl = transparentVideoWebm;
+    else if (field === "transparentVideoHevc") previousUrl = transparentVideoHevc;
+    else if (field === "poster") previousUrl = videoPoster;
+
+    setUploadingVideoField(field);
+
+    try {
+      const isPoster = field === "poster";
+      const targetBucket = isPoster ? "aurevilux-products" : "aurevilux-videos";
+      const targetFolder = isPoster ? "products/posters" : "videos";
+
+      // 1 & 2. Upload to Supabase bucket aurevilux-videos (or aurevilux-products for poster)
+      // Server checks if previousUrl is in Supabase; if so, purges it from storage
+      const res = await UploadService.uploadVideoAndReplace(file, {
+        bucket: targetBucket,
+        folder: targetFolder,
+        previousUrl: previousUrl || undefined,
+        validation: isPoster
+          ? {
+              allowedMimeTypes: ["image/jpeg", "image/png", "image/webp", "image/avif"],
+              allowedExtensions: ["jpg", "jpeg", "png", "webp", "avif"],
+              maxSizeMB: 15,
+            }
+          : {
+              allowedMimeTypes: [
+                "video/webm",
+                "video/mp4",
+                "video/quicktime",
+                "video/x-matroska",
+                "video/ogg",
+              ],
+              allowedExtensions: ["webm", "mp4", "mov", "mkv", "ogv"],
+              maxSizeMB: 100,
+            },
+      });
+
+      const newUrl = res?.publicUrl || (res as any)?.url;
+      if (!newUrl) {
+        throw new Error("No public URL returned from Supabase storage.");
+      }
+
+      // Update local state
+      let updatedBg = backgroundVideo;
+      let updatedWebm = transparentVideoWebm;
+      let updatedHevc = transparentVideoHevc;
+      let updatedPoster = videoPoster;
+
+      if (field === "backgroundVideo") {
+        setBackgroundVideo(newUrl);
+        updatedBg = newUrl;
+      } else if (field === "transparentVideoWebm") {
+        setTransparentVideoWebm(newUrl);
+        updatedWebm = newUrl;
+      } else if (field === "transparentVideoHevc") {
+        setTransparentVideoHevc(newUrl);
+        updatedHevc = newUrl;
+      } else if (field === "poster") {
+        setVideoPoster(newUrl);
+        updatedPoster = newUrl;
+      }
+
+      // 3. Save link to database immediately if editing existing product
+      if (isEditing && product) {
+        const prodId = product._id || product.id || product.slug;
+        if (prodId) {
+          const editorialVideoPayload = {
+            backgroundVideo: updatedBg.trim() || undefined,
+            transparentVideoWebm: updatedWebm.trim() || undefined,
+            transparentVideoHevc: updatedHevc.trim() || undefined,
+            poster: updatedPoster.trim() || undefined,
+            duration: Number(videoDuration) || 7,
+          };
+
+          await ProductService.updateProduct(prodId, {
+            editorialVideo: editorialVideoPayload,
+          });
+          showAlert(
+            "success",
+            `Video uploaded to Supabase (${targetBucket}) and link saved to database.`
+          );
+        }
+      } else {
+        showAlert(
+          "success",
+          `Video uploaded to Supabase (${targetBucket}). Link ready for database submission.`
+        );
+      }
+    } catch (err: any) {
+      console.error("Video upload error:", err);
+      showAlert("error", "Supabase video upload failed: " + (err.message || err));
+    } finally {
+      setUploadingVideoField(null);
+      e.target.value = "";
+    }
+  };
+
+  // Remove single video field and purge from Supabase Storage
+  const handleClearVideoField = async (
+    field: "backgroundVideo" | "transparentVideoWebm" | "transparentVideoHevc" | "poster"
+  ) => {
+    let targetUrl = "";
+    let updatedBg = backgroundVideo;
+    let updatedWebm = transparentVideoWebm;
+    let updatedHevc = transparentVideoHevc;
+    let updatedPoster = videoPoster;
+
+    if (field === "backgroundVideo") {
+      targetUrl = backgroundVideo;
+      setBackgroundVideo("");
+      updatedBg = "";
+    } else if (field === "transparentVideoWebm") {
+      targetUrl = transparentVideoWebm;
+      setTransparentVideoWebm("");
+      updatedWebm = "";
+    } else if (field === "transparentVideoHevc") {
+      targetUrl = transparentVideoHevc;
+      setTransparentVideoHevc("");
+      updatedHevc = "";
+    } else if (field === "poster") {
+      targetUrl = videoPoster;
+      setVideoPoster("");
+      updatedPoster = "";
+    }
+
+    if (targetUrl && isSupabaseStorageUrl(targetUrl)) {
+      try {
+        await UploadService.deleteVideo(targetUrl);
+      } catch (err) {
+        console.warn("Could not purge video from Supabase:", err);
+      }
+    }
+
+    if (isEditing && product) {
+      const prodId = product._id || product.id || product.slug;
+      if (prodId) {
+        try {
+          const hasAny = Boolean(
+            updatedBg.trim() ||
+            updatedWebm.trim() ||
+            updatedHevc.trim() ||
+            updatedPoster.trim()
+          );
+
+          await ProductService.updateProduct(prodId, {
+            editorialVideo: hasAny
+              ? {
+                  backgroundVideo: updatedBg.trim() || undefined,
+                  transparentVideoWebm: updatedWebm.trim() || undefined,
+                  transparentVideoHevc: updatedHevc.trim() || undefined,
+                  poster: updatedPoster.trim() || undefined,
+                  duration: Number(videoDuration) || 7,
+                }
+              : null,
+          });
+        } catch {}
+      }
+    }
+
+    showAlert("info", "Video removed and purged from Supabase Storage.");
+  };
+
+  // Clear all video fields and purge from Supabase Storage
+  const handleClearAllVideos = async () => {
+    const urlsToPurge = [
+      backgroundVideo,
+      transparentVideoWebm,
+      transparentVideoHevc,
+      videoPoster,
+    ].filter((u) => u && isSupabaseStorageUrl(u));
+
+    setBackgroundVideo("");
+    setTransparentVideoWebm("");
+    setTransparentVideoHevc("");
+    setVideoPoster("");
+    setVideoDuration(7);
+
+    for (const url of urlsToPurge) {
+      try {
+        await UploadService.deleteVideo(url);
+      } catch (err) {
+        console.warn("Could not purge video from Supabase:", err);
+      }
+    }
+
+    if (isEditing && product) {
+      const prodId = product._id || product.id || product.slug;
+      if (prodId) {
+        try {
+          await ProductService.updateProduct(prodId, {
+            editorialVideo: null,
+          });
+        } catch {}
+      }
+    }
+
+    showAlert("info", "All video assets purged from Supabase Storage and database cleared.");
+  };
+
   // Color management
   const handleAddColor = () => {
     if (!newColorName.trim()) return;
@@ -345,16 +566,22 @@ export const ProductForm: React.FC<ProductFormProps> = ({
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/(^-|-$)+/g, "");
 
-    const editorialVideoPayload =
-      backgroundVideo.trim() && transparentVideoWebm.trim()
-        ? {
-            backgroundVideo: backgroundVideo.trim(),
-            transparentVideoWebm: transparentVideoWebm.trim(),
-            transparentVideoHevc: transparentVideoHevc.trim() || undefined,
-            poster: videoPoster.trim() || undefined,
-            duration: Number(videoDuration) || 7,
-          }
-        : null;
+    const hasAnyVideo = Boolean(
+      backgroundVideo.trim() ||
+      transparentVideoWebm.trim() ||
+      transparentVideoHevc.trim() ||
+      videoPoster.trim()
+    );
+
+    const editorialVideoPayload = hasAnyVideo
+      ? {
+          backgroundVideo: backgroundVideo.trim() || undefined,
+          transparentVideoWebm: transparentVideoWebm.trim() || undefined,
+          transparentVideoHevc: transparentVideoHevc.trim() || undefined,
+          poster: videoPoster.trim() || undefined,
+          duration: Number(videoDuration) || 7,
+        }
+      : null;
 
     const payload: Partial<Product> = {
       name: name.trim(),
@@ -855,62 +1082,182 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                     Cinematic Video Introduction (Optional)
                   </h2>
                   <span className="text-[10px] text-zinc-500 font-mono block">
-                    Two-layer synchronized luxury campaign opening (6–8 seconds)
+                    Two-layer synchronized luxury campaign opening &bull; Supabase Storage (aurevilux-videos)
                   </span>
                 </div>
               </div>
-              {(backgroundVideo || transparentVideoWebm) && (
+              {(backgroundVideo || transparentVideoWebm || transparentVideoHevc || videoPoster) && (
                 <button
                   type="button"
-                  onClick={() => {
-                    setBackgroundVideo("");
-                    setTransparentVideoWebm("");
-                    setTransparentVideoHevc("");
-                    setVideoPoster("");
-                    setVideoDuration(7);
-                  }}
-                  className="text-[10px] text-zinc-500 hover:text-red-400 uppercase tracking-wider font-mono flex items-center gap-1"
+                  onClick={handleClearAllVideos}
+                  className="text-[10px] text-zinc-500 hover:text-red-400 uppercase tracking-wider font-mono flex items-center gap-1 transition-colors"
                 >
                   <X className="w-3 h-3" />
-                  <span>Clear Video</span>
+                  <span>Clear All Videos</span>
                 </button>
               )}
             </div>
 
             <p className="text-xs text-zinc-400 font-light leading-relaxed">
-              When specified, a synchronized two-layer editorial video introduction plays on page load: the background video fills the screen, and the transparent model moves in the foreground. If left blank, the piece opens directly to the product gallery.
+              When specified, a synchronized two-layer editorial video introduction plays on page load: the background video fills the screen, and the transparent model moves in the foreground. Upload videos directly to the <span className="text-brand-gold font-mono">aurevilux-videos</span> Supabase bucket; previous files are automatically replaced and removed.
             </p>
 
             <div className="space-y-4 pt-1">
               {/* Row 1: Background Video + Transparent Video WebM */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* 1. Background Video */}
                 <div>
-                  <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block mb-1.5">
-                    Background Video URL (WebM / MP4)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. /media/videos/gown-bg.webm"
-                    value={backgroundVideo}
-                    onChange={(e) => setBackgroundVideo(e.target.value)}
-                    className="w-full bg-[#0a0a0c] border border-zinc-800 text-xs px-3.5 py-2.5 rounded text-white font-mono outline-none focus:border-brand-gold"
-                  />
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block">
+                      Background Video URL (WebM / MP4)
+                    </label>
+                    {backgroundVideo && isSupabaseStorageUrl(backgroundVideo) && (
+                      <span className="text-[9px] text-emerald-400 flex items-center gap-1 font-mono">
+                        <CheckCircle2 className="w-2.5 h-2.5" />
+                        Supabase Video
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <input
+                        type="text"
+                        placeholder="e.g. /media/videos/gown-bg.webm"
+                        value={backgroundVideo}
+                        onChange={(e) => setBackgroundVideo(e.target.value)}
+                        className="w-full bg-[#0a0a0c] border border-zinc-800 text-xs px-3.5 py-2.5 rounded text-white font-mono outline-none focus:border-brand-gold pr-14"
+                      />
+                      {backgroundVideo && (
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setPreviewMedia({
+                                url: backgroundVideo,
+                                title: "Background Video Preview",
+                                isVideo: true,
+                              })
+                            }
+                            title="Preview video"
+                            className="p-1 text-zinc-400 hover:text-brand-gold transition-colors"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleClearVideoField("backgroundVideo")}
+                            title="Remove & purge from Supabase"
+                            className="p-1 text-zinc-400 hover:text-red-400 transition-colors"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <label
+                      className={`flex items-center gap-1.5 px-3 py-2 bg-zinc-900 border border-zinc-800 hover:border-brand-gold/60 text-zinc-300 hover:text-brand-gold rounded text-[11px] font-mono uppercase tracking-wider cursor-pointer transition-all shrink-0 ${
+                        uploadingVideoField === "backgroundVideo"
+                          ? "opacity-60 pointer-events-none"
+                          : ""
+                      }`}
+                      title="Upload video to Supabase aurevilux-videos bucket"
+                    >
+                      {uploadingVideoField === "backgroundVideo" ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-brand-gold" />
+                      ) : (
+                        <Upload className="w-3.5 h-3.5 text-brand-gold" />
+                      )}
+                      <span>
+                        {uploadingVideoField === "backgroundVideo" ? "Uploading..." : "Upload"}
+                      </span>
+                      <input
+                        type="file"
+                        accept="video/webm,video/mp4,video/*,.webm,.mp4"
+                        onChange={(e) => handleVideoUpload(e, "backgroundVideo")}
+                        disabled={uploadingVideoField !== null}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
                   <span className="text-[9px] text-zinc-500 mt-1 block">
-                    Original scene with background intact
+                    Original scene with background intact &bull; WebM or MP4
                   </span>
                 </div>
 
+                {/* 2. Transparent Foreground Video WebM */}
                 <div>
-                  <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block mb-1.5">
-                    Transparent Foreground Video (VP9 WebM with Alpha)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. /media/videos/gown-fg-vp9.webm"
-                    value={transparentVideoWebm}
-                    onChange={(e) => setTransparentVideoWebm(e.target.value)}
-                    className="w-full bg-[#0a0a0c] border border-zinc-800 text-xs px-3.5 py-2.5 rounded text-white font-mono outline-none focus:border-brand-gold"
-                  />
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block">
+                      Transparent Foreground Video (VP9 WebM with Alpha)
+                    </label>
+                    {transparentVideoWebm && isSupabaseStorageUrl(transparentVideoWebm) && (
+                      <span className="text-[9px] text-emerald-400 flex items-center gap-1 font-mono">
+                        <CheckCircle2 className="w-2.5 h-2.5" />
+                        Supabase Video
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <input
+                        type="text"
+                        placeholder="e.g. /media/videos/gown-fg-vp9.webm"
+                        value={transparentVideoWebm}
+                        onChange={(e) => setTransparentVideoWebm(e.target.value)}
+                        className="w-full bg-[#0a0a0c] border border-zinc-800 text-xs px-3.5 py-2.5 rounded text-white font-mono outline-none focus:border-brand-gold pr-14"
+                      />
+                      {transparentVideoWebm && (
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setPreviewMedia({
+                                url: transparentVideoWebm,
+                                title: "Transparent Foreground VP9 Preview",
+                                isVideo: true,
+                              })
+                            }
+                            title="Preview video"
+                            className="p-1 text-zinc-400 hover:text-brand-gold transition-colors"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleClearVideoField("transparentVideoWebm")}
+                            title="Remove & purge from Supabase"
+                            className="p-1 text-zinc-400 hover:text-red-400 transition-colors"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <label
+                      className={`flex items-center gap-1.5 px-3 py-2 bg-zinc-900 border border-zinc-800 hover:border-brand-gold/60 text-zinc-300 hover:text-brand-gold rounded text-[11px] font-mono uppercase tracking-wider cursor-pointer transition-all shrink-0 ${
+                        uploadingVideoField === "transparentVideoWebm"
+                          ? "opacity-60 pointer-events-none"
+                          : ""
+                      }`}
+                      title="Upload VP9 WebM alpha video to Supabase aurevilux-videos bucket"
+                    >
+                      {uploadingVideoField === "transparentVideoWebm" ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin text-brand-gold" />
+                      ) : (
+                        <Upload className="w-3.5 h-3.5 text-brand-gold" />
+                      )}
+                      <span>
+                        {uploadingVideoField === "transparentVideoWebm" ? "Uploading..." : "Upload"}
+                      </span>
+                      <input
+                        type="file"
+                        accept="video/webm,.webm"
+                        onChange={(e) => handleVideoUpload(e, "transparentVideoWebm")}
+                        disabled={uploadingVideoField !== null}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
                   <span className="text-[9px] text-zinc-500 mt-1 block">
                     Same video with background removed (Chrome/Firefox/Edge)
                   </span>
@@ -919,38 +1266,163 @@ export const ProductForm: React.FC<ProductFormProps> = ({
 
               {/* Row 2: Safari HEVC + Poster Frame + Duration */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* 3. Safari HEVC Alpha */}
                 <div>
-                  <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block mb-1.5">
-                    Safari HEVC Alpha (Optional MP4)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. /media/videos/gown-fg-hevc.mp4"
-                    value={transparentVideoHevc}
-                    onChange={(e) => setTransparentVideoHevc(e.target.value)}
-                    className="w-full bg-[#0a0a0c] border border-zinc-800 text-xs px-3.5 py-2.5 rounded text-white font-mono outline-none focus:border-brand-gold"
-                  />
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block">
+                      Safari HEVC Alpha (Optional MP4)
+                    </label>
+                    {transparentVideoHevc && isSupabaseStorageUrl(transparentVideoHevc) && (
+                      <span className="text-[9px] text-emerald-400 flex items-center gap-1 font-mono">
+                        <CheckCircle2 className="w-2.5 h-2.5" />
+                        Supabase
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <input
+                        type="text"
+                        placeholder="e.g. /media/videos/gown-fg-hevc.mp4"
+                        value={transparentVideoHevc}
+                        onChange={(e) => setTransparentVideoHevc(e.target.value)}
+                        className="w-full bg-[#0a0a0c] border border-zinc-800 text-xs px-3.5 py-2.5 rounded text-white font-mono outline-none focus:border-brand-gold pr-14"
+                      />
+                      {transparentVideoHevc && (
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setPreviewMedia({
+                                url: transparentVideoHevc,
+                                title: "Safari HEVC Alpha Video Preview",
+                                isVideo: true,
+                              })
+                            }
+                            title="Preview video"
+                            className="p-1 text-zinc-400 hover:text-brand-gold transition-colors"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleClearVideoField("transparentVideoHevc")}
+                            title="Remove & purge from Supabase"
+                            className="p-1 text-zinc-400 hover:text-red-400 transition-colors"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <label
+                      className={`flex items-center gap-1.5 px-2.5 py-2 bg-zinc-900 border border-zinc-800 hover:border-brand-gold/60 text-zinc-300 hover:text-brand-gold rounded text-[11px] font-mono uppercase tracking-wider cursor-pointer transition-all shrink-0 ${
+                        uploadingVideoField === "transparentVideoHevc"
+                          ? "opacity-60 pointer-events-none"
+                          : ""
+                      }`}
+                      title="Upload HEVC MP4 to Supabase aurevilux-videos bucket"
+                    >
+                      {uploadingVideoField === "transparentVideoHevc" ? (
+                        <Loader2 className="w-3 h-3 animate-spin text-brand-gold" />
+                      ) : (
+                        <Upload className="w-3 h-3 text-brand-gold" />
+                      )}
+                      <span>
+                        {uploadingVideoField === "transparentVideoHevc" ? "..." : "Upload"}
+                      </span>
+                      <input
+                        type="file"
+                        accept="video/mp4,video/quicktime,.mp4,.mov"
+                        onChange={(e) => handleVideoUpload(e, "transparentVideoHevc")}
+                        disabled={uploadingVideoField !== null}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
                   <span className="text-[9px] text-zinc-500 mt-1 block">
                     Apple Safari / iOS transparent video
                   </span>
                 </div>
 
+                {/* 4. Poster Frame Preview URL */}
                 <div>
-                  <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block mb-1.5">
-                    Poster Frame Preview URL (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. /images/products/gown-poster.webp"
-                    value={videoPoster}
-                    onChange={(e) => setVideoPoster(e.target.value)}
-                    className="w-full bg-[#0a0a0c] border border-zinc-800 text-xs px-3.5 py-2.5 rounded text-white font-mono outline-none focus:border-brand-gold"
-                  />
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block">
+                      Poster Frame Preview URL (Optional)
+                    </label>
+                    {videoPoster && isSupabaseStorageUrl(videoPoster) && (
+                      <span className="text-[9px] text-emerald-400 flex items-center gap-1 font-mono">
+                        <CheckCircle2 className="w-2.5 h-2.5" />
+                        Supabase
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <input
+                        type="text"
+                        placeholder="e.g. /images/products/gown-poster.webp"
+                        value={videoPoster}
+                        onChange={(e) => setVideoPoster(e.target.value)}
+                        className="w-full bg-[#0a0a0c] border border-zinc-800 text-xs px-3.5 py-2.5 rounded text-white font-mono outline-none focus:border-brand-gold pr-14"
+                      />
+                      {videoPoster && (
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setPreviewMedia({
+                                url: videoPoster,
+                                title: "Poster Frame Preview",
+                                isVideo: false,
+                              })
+                            }
+                            title="Preview poster"
+                            className="p-1 text-zinc-400 hover:text-brand-gold transition-colors"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleClearVideoField("poster")}
+                            title="Remove & purge from Supabase"
+                            className="p-1 text-zinc-400 hover:text-red-400 transition-colors"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                    <label
+                      className={`flex items-center gap-1.5 px-2.5 py-2 bg-zinc-900 border border-zinc-800 hover:border-brand-gold/60 text-zinc-300 hover:text-brand-gold rounded text-[11px] font-mono uppercase tracking-wider cursor-pointer transition-all shrink-0 ${
+                        uploadingVideoField === "poster"
+                          ? "opacity-60 pointer-events-none"
+                          : ""
+                      }`}
+                      title="Upload poster image to Supabase"
+                    >
+                      {uploadingVideoField === "poster" ? (
+                        <Loader2 className="w-3 h-3 animate-spin text-brand-gold" />
+                      ) : (
+                        <Upload className="w-3 h-3 text-brand-gold" />
+                      )}
+                      <span>{uploadingVideoField === "poster" ? "..." : "Upload"}</span>
+                      <input
+                        type="file"
+                        accept="image/*,.webp,.jpg,.jpeg,.png"
+                        onChange={(e) => handleVideoUpload(e, "poster")}
+                        disabled={uploadingVideoField !== null}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
                   <span className="text-[9px] text-zinc-500 mt-1 block">
                     High-res preview while buffering
                   </span>
                 </div>
 
+                {/* 5. Intro Duration */}
                 <div>
                   <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block mb-1.5">
                     Intro Duration (Seconds)
@@ -976,7 +1448,11 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                   Status:{" "}
                   {backgroundVideo && transparentVideoWebm ? (
                     <span className="text-emerald-400 font-semibold">
-                      &bull; Editorial Video Configured (Dual-Layer Active)
+                      &bull; Editorial Video Configured (Dual-Layer Active &bull; Supabase Storage)
+                    </span>
+                  ) : backgroundVideo ? (
+                    <span className="text-brand-gold font-semibold">
+                      &bull; Single Background Video Configured &bull; Supabase Storage
                     </span>
                   ) : (
                     <span className="text-zinc-500">
@@ -984,6 +1460,12 @@ export const ProductForm: React.FC<ProductFormProps> = ({
                     </span>
                   )}
                 </span>
+                {uploadingVideoField && (
+                  <span className="text-brand-gold flex items-center gap-1.5 animate-pulse">
+                    <Loader2 className="w-3 h-3 animate-spin" />
+                    Uploading asset to Supabase (aurevilux-videos)...
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -1158,6 +1640,69 @@ export const ProductForm: React.FC<ProductFormProps> = ({
           </div>
         </div>
       </form>
+
+      {/* Media Preview Modal */}
+      {previewMedia && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4"
+          onClick={() => setPreviewMedia(null)}
+        >
+          <div
+            className="bg-[#101014] border border-brand-gold/30 rounded-xl p-5 max-w-2xl w-full shadow-2xl relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-zinc-800 pb-3 mb-4">
+              <div className="flex items-center gap-2">
+                <Film className="w-4 h-4 text-brand-gold" />
+                <h3 className="font-serif text-sm uppercase tracking-wider text-white">
+                  {previewMedia.title}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setPreviewMedia(null)}
+                className="p-1 text-zinc-400 hover:text-white transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="rounded-lg overflow-hidden bg-black flex items-center justify-center min-h-[260px] max-h-[60vh] border border-zinc-900">
+              {previewMedia.isVideo ? (
+                <video
+                  src={previewMedia.url}
+                  controls
+                  autoPlay
+                  playsInline
+                  className="max-h-[58vh] w-auto max-w-full rounded"
+                >
+                  Your browser does not support HTML5 video preview.
+                </video>
+              ) : (
+                <img
+                  src={previewMedia.url}
+                  alt={previewMedia.title}
+                  className="max-h-[58vh] w-auto max-w-full object-contain rounded"
+                />
+              )}
+            </div>
+
+            <div className="mt-3 flex items-center justify-between text-[11px] font-mono text-zinc-400">
+              <span className="truncate max-w-md">{previewMedia.url}</span>
+              <a
+                href={previewMedia.url}
+                target="_blank"
+                rel="noreferrer"
+                className="text-brand-gold hover:underline uppercase tracking-wider text-[10px]"
+              >
+                Open in tab &rarr;
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

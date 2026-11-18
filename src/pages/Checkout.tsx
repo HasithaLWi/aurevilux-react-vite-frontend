@@ -3,7 +3,6 @@ import { useNavigate, Link } from "react-router-dom";
 import {
   ShieldCheck,
   Loader2,
-  ChevronDown,
   CheckCircle2,
   MapPin,
   CreditCard,
@@ -30,7 +29,6 @@ export default function Checkout() {
   const [activeStep, setActiveStep] = useState<CheckoutStep>("shipping");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("credit");
   const [saveForFuture, setSaveForFuture] = useState(true);
-  const [promoCode, setPromoCode] = useState("");
 
   // Saved Profile Vault State
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
@@ -47,7 +45,7 @@ export default function Checkout() {
     city: "",
     state: "",
     postalCode: "",
-    country: "United States",
+    country: "",
     cardHolder: "",
     cardNumber: "",
     cardExpiry: "",
@@ -70,6 +68,9 @@ export default function Checkout() {
       UserService.getUserProfile()
         .then((profile) => {
           if (profile) {
+            let activeName = profile.name || user.name || "";
+            let activePostal = profile.postalCode || "";
+
             if (profile.savedAddresses && profile.savedAddresses.length > 0) {
               setSavedAddresses(profile.savedAddresses);
               // Select default address if available
@@ -81,12 +82,14 @@ export default function Checkout() {
                 setSelectedAddressId(
                   defaultAddr.id || (defaultAddr as any)._id || "addr-0",
                 );
+                activeName = defaultAddr.name || activeName;
+                activePostal = defaultAddr.postalCode || activePostal;
               }
             } else if (profile.address || profile.name) {
               setFormData((prev) => ({
                 ...prev,
-                fullName: profile.name || prev.fullName,
-                email: profile.email || prev.email,
+                fullName: profile.name || user.name || prev.fullName,
+                email: profile.email || user.email || prev.email,
                 phone: profile.phone || prev.phone,
                 address: profile.address || prev.address,
                 city: profile.city || prev.city,
@@ -95,6 +98,13 @@ export default function Checkout() {
                 country: (profile as any).country || prev.country,
               }));
             }
+
+            // Always ensure cardHolder and cardZip default from user profile
+            setFormData((prev) => ({
+              ...prev,
+              cardHolder: prev.cardHolder || activeName,
+              cardZip: prev.cardZip || activePostal,
+            }));
 
             if (profile.savedCards && profile.savedCards.length > 0) {
               setSavedCards(profile.savedCards);
@@ -107,6 +117,8 @@ export default function Checkout() {
                   defaultCard.id || (defaultCard as any)._id || "card-0",
                 );
               }
+            } else {
+              loadSavedCardFromLocalStorage(activeName, activePostal);
             }
           }
         })
@@ -122,11 +134,35 @@ export default function Checkout() {
     }
   }, []);
 
+  const loadSavedCardFromLocalStorage = (fallbackName = "", fallbackZip = "") => {
+    const savedCard = localStorage.getItem("aurevilux_payment_details");
+    if (savedCard) {
+      try {
+        const card = JSON.parse(savedCard);
+        setFormData((prev) => ({
+          ...prev,
+          cardHolder: card.cardHolder || fallbackName || prev.cardHolder || prev.fullName,
+          cardNumber: card.cardNumber || prev.cardNumber,
+          cardExpiry: card.cardExpiry || card.expiry || prev.cardExpiry,
+          cardCvv: card.cardCvv || "•••",
+          cardZip: card.cardZip || fallbackZip || prev.postalCode || prev.cardZip || "",
+        }));
+      } catch (e) {
+        console.error("Error parsing saved card in checkout", e);
+      }
+    }
+  };
+
   const loadLocalStorageData = () => {
+    let localName = "";
+    let localZip = "";
+
     const savedProfile = localStorage.getItem("aurevilux_user_profile");
     if (savedProfile) {
       try {
         const profile = JSON.parse(savedProfile);
+        localName = profile.name || "";
+        localZip = profile.postalCode || "";
         setFormData((prev) => ({
           ...prev,
           fullName: profile.name || prev.fullName,
@@ -143,22 +179,7 @@ export default function Checkout() {
       }
     }
 
-    const savedCard = localStorage.getItem("aurevilux_payment_details");
-    if (savedCard) {
-      try {
-        const card = JSON.parse(savedCard);
-        setFormData((prev) => ({
-          ...prev,
-          cardHolder: card.cardHolder || prev.cardHolder,
-          cardNumber: card.cardNumber || prev.cardNumber,
-          cardExpiry: card.cardExpiry || prev.cardExpiry,
-          cardCvv: card.cardCvv || prev.cardCvv,
-          cardZip: card.cardZip || prev.postalCode || "",
-        }));
-      } catch (e) {
-        console.error("Error parsing saved card in checkout", e);
-      }
-    }
+    loadSavedCardFromLocalStorage(localName, localZip);
   };
 
   const applyAddressToForm = (addr: SavedAddress) => {
@@ -171,15 +192,17 @@ export default function Checkout() {
       state: (addr as any).state || prev.state || addr.city,
       postalCode: addr.postalCode || prev.postalCode,
       country: addr.country || prev.country,
+      cardHolder: prev.cardHolder || addr.name || prev.fullName,
+      cardZip: prev.cardZip || addr.postalCode || prev.postalCode,
     }));
   };
 
   const applyCardToForm = (card: PaymentMethodCard) => {
     setFormData((prev) => ({
       ...prev,
-      cardHolder: card.cardHolder || prev.cardHolder,
+      cardHolder: card.cardHolder || prev.cardHolder || prev.fullName,
       cardNumber: card.cardNumber || prev.cardNumber,
-      cardExpiry: card.expiry || prev.cardExpiry,
+      cardExpiry: card.expiry || (card as any).cardExpiry || prev.cardExpiry,
       cardCvv: "•••",
     }));
   };
@@ -381,11 +404,9 @@ export default function Checkout() {
     );
   }
 
-  // Summary Calculations
+  // Summary Calculations (Tax removed per requirement)
   const shippingFee = cartTotal > 500 ? 0 : 35;
-  const taxRate = 0.075;
-  const taxFee = Math.round(cartTotal * taxRate * 100) / 100;
-  const grandTotal = cartTotal + shippingFee + taxFee;
+  const grandTotal = cartTotal + shippingFee;
   const itemCount = cart.reduce((c, i) => c + i.quantity, 0);
 
   if (cart.length === 0) {
@@ -435,6 +456,15 @@ export default function Checkout() {
         "warning",
         "Please complete all delivery destination fields including State / Province.",
         "Missing Shipping Parameters",
+      );
+      return;
+    }
+
+    if (paymentMethod === "paypal" || paymentMethod === "applepay") {
+      showAlert(
+        "info",
+        `${paymentMethod === "paypal" ? "PayPal" : "Apple Pay"} direct settlement is currently coming soon. Please select Credit Card to authorize your acquisition today.`,
+        "Gateway Coming Soon"
       );
       return;
     }
@@ -850,26 +880,15 @@ export default function Checkout() {
                   <label className="text-[10px] text-zinc-400 uppercase tracking-widest font-semibold block mb-1">
                     Country *
                   </label>
-                  <div className="relative">
-                    <select
-                      name="country"
-                      value={formData.country}
-                      onChange={handleInputChange}
-                      className={`${inputClass} appearance-none cursor-pointer pr-8`}
-                    >
-                      <option value="United States">United States</option>
-                      <option value="United Kingdom">United Kingdom</option>
-                      <option value="France">France</option>
-                      <option value="Italy">Italy</option>
-                      <option value="Japan">Japan</option>
-                      <option value="Germany">Germany</option>
-                      <option value="Australia">Australia</option>
-                      <option value="Switzerland">Switzerland</option>
-                    </select>
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-500">
-                      <ChevronDown className="w-4 h-4" />
-                    </span>
-                  </div>
+                  <input
+                    type="text"
+                    name="country"
+                    required
+                    placeholder="e.g. Sri Lanka"
+                    value={formData.country}
+                    onChange={handleInputChange}
+                    className={inputClass}
+                  />
                 </div>
               </div>
 
@@ -986,7 +1005,7 @@ export default function Checkout() {
                 <button
                   type="button"
                   onClick={() => setPaymentMethod("paypal")}
-                  className={`flex items-center justify-center py-4 px-3 rounded-lg border transition-all duration-300 ${
+                  className={`relative flex flex-col items-center justify-center gap-1 py-3 px-3 rounded-lg border transition-all duration-300 ${
                     paymentMethod === "paypal"
                       ? "border-brand-gold/50 bg-brand-burgundy/10 text-white"
                       : "border-zinc-800 bg-[#08080a] text-zinc-400 hover:border-zinc-700"
@@ -997,25 +1016,33 @@ export default function Checkout() {
                     <span className="text-[#003087]">Pay</span>
                     <span className="text-[#009CDE]">Pal</span>
                   </span>
+                  <span className="text-[8px] bg-amber-500/15 text-amber-300 px-1.5 py-0.5 rounded font-mono uppercase tracking-wider font-semibold border border-amber-500/30">
+                    Coming Soon
+                  </span>
                 </button>
 
                 <button
                   type="button"
                   onClick={() => setPaymentMethod("applepay")}
-                  className={`flex items-center justify-center gap-1.5 py-4 px-3 rounded-lg border transition-all duration-300 ${
+                  className={`relative flex flex-col items-center justify-center gap-1 py-3 px-3 rounded-lg border transition-all duration-300 ${
                     paymentMethod === "applepay"
                       ? "border-brand-gold/50 bg-brand-burgundy/10 text-white"
                       : "border-zinc-800 bg-[#08080a] text-zinc-400 hover:border-zinc-700"
                   }`}
                 >
-                  <svg
-                    viewBox="0 0 24 24"
-                    className="w-4 h-4 text-white fill-current"
-                  >
-                    <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
-                  </svg>
-                  <span className="text-[13px] font-semibold text-white">
-                    Pay
+                  <div className="flex items-center gap-1">
+                    <svg
+                      viewBox="0 0 24 24"
+                      className="w-3.5 h-3.5 text-white fill-current"
+                    >
+                      <path d="M17.05 20.28c-.98.95-2.05.88-3.08.4-1.09-.5-2.08-.48-3.24 0-1.44.62-2.2.44-3.06-.4C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
+                    </svg>
+                    <span className="text-[12px] font-semibold text-white">
+                      Pay
+                    </span>
+                  </div>
+                  <span className="text-[8px] bg-amber-500/15 text-amber-300 px-1.5 py-0.5 rounded font-mono uppercase tracking-wider font-semibold border border-amber-500/30">
+                    Coming Soon
                   </span>
                 </button>
               </div>
@@ -1103,15 +1130,30 @@ export default function Checkout() {
               )}
 
               {paymentMethod === "paypal" && (
-                <div className="text-center py-8 text-zinc-400 text-sm bg-[#08080a] border border-zinc-800 rounded-lg">
-                  PayPal gateway initialized. Complete payment authentication
-                  upon clicking Authorize.
+                <div className="text-center py-7 px-6 bg-[#0e0e13] border border-amber-500/30 rounded-xl space-y-2">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-amber-500/15 text-amber-300 text-[10px] uppercase font-mono tracking-widest font-bold border border-amber-500/30">
+                    Coming Soon
+                  </div>
+                  <h4 className="font-serif text-base text-white tracking-wide">
+                    PayPal Direct Checkout is Coming Soon
+                  </h4>
+                  <p className="text-xs text-zinc-400 max-w-sm mx-auto leading-relaxed">
+                    PayPal payment integration is currently under atelier development. Please select <strong className="text-brand-gold font-medium">Credit Card</strong> to authorize your order.
+                  </p>
                 </div>
               )}
 
               {paymentMethod === "applepay" && (
-                <div className="text-center py-8 text-zinc-400 text-sm bg-[#08080a] border border-zinc-800 rounded-lg">
-                  Authenticate with Apple Touch ID or Face ID on your device.
+                <div className="text-center py-7 px-6 bg-[#0e0e13] border border-amber-500/30 rounded-xl space-y-2">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-amber-500/15 text-amber-300 text-[10px] uppercase font-mono tracking-widest font-bold border border-amber-500/30">
+                    Coming Soon
+                  </div>
+                  <h4 className="font-serif text-base text-white tracking-wide">
+                    Apple Pay One-Touch is Coming Soon
+                  </h4>
+                  <p className="text-xs text-zinc-400 max-w-sm mx-auto leading-relaxed">
+                    Apple Pay integration is coming in an upcoming release. Please use <strong className="text-brand-gold font-medium">Credit Card</strong> to complete your acquisition today.
+                  </p>
                 </div>
               )}
             </div>
@@ -1200,17 +1242,6 @@ export default function Checkout() {
                       </span>
                     )}
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-zinc-400">
-                      Haute Sales Tax (7.5%)
-                    </span>
-                    <span className="text-white font-medium font-mono">
-                      $
-                      {taxFee.toLocaleString("en-US", {
-                        minimumFractionDigits: 2,
-                      })}
-                    </span>
-                  </div>
                 </div>
 
                 {/* Grand Total */}
@@ -1226,17 +1257,6 @@ export default function Checkout() {
                       })}
                     </span>
                   </div>
-                </div>
-
-                {/* Promo Code */}
-                <div className="px-6 pb-4">
-                  <input
-                    type="text"
-                    placeholder="VIP PROMO CODE"
-                    value={promoCode}
-                    onChange={(e) => setPromoCode(e.target.value)}
-                    className="w-full bg-white/[0.04] border border-white/[0.08] focus:border-brand-gold/40 px-4 py-2.5 text-[12px] text-white/80 outline-none rounded-md placeholder:text-zinc-600 transition-colors uppercase tracking-widest font-mono"
-                  />
                 </div>
 
                 {/* Place Order Button */}

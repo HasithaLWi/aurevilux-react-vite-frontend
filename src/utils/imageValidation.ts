@@ -89,7 +89,8 @@ export function isSupabaseStorageUrl(url?: string | null): boolean {
   return (
     clean.includes("supabase.co/storage/v1/object") ||
     clean.includes("aurevilux-products") ||
-    clean.includes("aurevilux-user")
+    clean.includes("aurevilux-user") ||
+    clean.includes("aurevilux-videos")
   );
 }
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   ShoppingBag,
@@ -6,7 +6,6 @@ import {
   Plus,
   Minus,
   ShieldCheck,
-  Ticket,
   AlertTriangle,
 } from "lucide-react";
 import { useApp } from "../context/AppContext";
@@ -15,10 +14,7 @@ import { OrderService } from "../services/order.service";
 export default function Cart() {
   const { cart, removeFromCart, updateCartQuantity, cartTotal, clearCart } =
     useApp();
-  const [promoCode, setPromoCode] = useState("");
-  const [appliedDiscount, setAppliedDiscount] = useState(0); // in percent
-  const [promoError, setPromoError] = useState("");
-  const [promoSuccess, setPromoSuccess] = useState("");
+  const [appliedDiscount] = useState(0); // in percent
 
   // Live Stock Availability State
   const [stockStatus, setStockStatus] = useState<
@@ -77,18 +73,6 @@ export default function Cart() {
         removeFromCart(item.product.id, item.selectedColor, item.selectedSize);
       }
     });
-  };
-
-  const handleApplyPromo = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (promoCode.trim().toUpperCase() === "AUREVILUX10") {
-      setAppliedDiscount(10);
-      setPromoSuccess("PROMO CODE 'AUREVILUX10' APPLIED: 10% DISCOUNT");
-      setPromoError("");
-    } else {
-      setPromoError("INVALID OR EXPIRED PROMO CODE");
-      setPromoSuccess("");
-    }
   };
 
   // Calculations
@@ -377,13 +361,14 @@ export default function Cart() {
                 )}
               </div>
 
-              <div className="flex justify-between items-center">
+              {/* <div className="flex justify-between items-center">
                 <span>ESTIMATED TAX (8%)</span>
                 <span className="text-white font-medium">${taxFee}</span>
-              </div>
+              </div> */}
             </div>
 
             {/* Promocode form */}
+            {/*
             <div className="space-y-3">
               <form onSubmit={handleApplyPromo} className="flex gap-2">
                 <input
@@ -419,6 +404,7 @@ export default function Cart() {
                 FOR A 10% DISCOUNT.
               </p>
             </div>
+            */}
 
             {/* Grand Total */}
             <div className="flex justify-between items-center pt-2 text-sm border-t border-zinc-900/60 mt-4">
@@ -433,7 +419,7 @@ export default function Cart() {
             {/* Checkout Action */}
             <div className="space-y-3">
               {hasStockIssue &&
-              Object.values(stockStatus).some((s) => s.available === 0) ? (
+                Object.values(stockStatus).some((s) => s.available === 0) ? (
                 <div className="space-y-2">
                   <button
                     disabled

@@ -285,6 +285,10 @@ export default function Account() {
       }
       return [...prev, newCard];
     });
+    // Store in localStorage for instant checkout auto-fill
+    try {
+      localStorage.setItem("aurevilux_payment_details", JSON.stringify(newCard));
+    } catch (e) {}
     showToast("PAYMENT METHOD SECURELY ENCRYPTED & SAVED");
   };
 
@@ -293,6 +297,9 @@ export default function Account() {
       await UserService.deleteCard(id);
     } catch (err) {}
     setPaymentCards((prev) => prev.filter((c) => c.id !== id));
+    try {
+      localStorage.removeItem("aurevilux_payment_details");
+    } catch (e) {}
     showToast("CARD REMOVED FROM ATELIER VAULT");
   };
 
